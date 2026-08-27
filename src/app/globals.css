@@ -1,0 +1,90 @@
+@import "tailwindcss";
+
+@theme {
+  /* ---- Colors extracted from the source site ---- */
+  --color-background: #0b1020;
+  --color-foreground: #ffffff;
+  --color-primary: #00ac3b;
+  --color-primary-foreground: #0b1020;
+  --color-secondary: #f8fafc;
+  --color-muted: #a6a5a5;
+  --color-border: #1f2937;
+  --color-card: #111827;
+  --color-input: #f5f5f3;
+  --color-tint: #032bec33;
+  --color-primary-soft: #00ac3b1f;
+  --color-primary-line: #00ac3b40;
+
+  /* ---- Fonts ---- */
+  --font-halyard: var(--font-halyard-book), ui-sans-serif, system-ui, sans-serif;
+  --font-halyard-bold: var(--font-halyard-bold-face), ui-sans-serif, system-ui, sans-serif;
+  --font-halyard-black: var(--font-halyard-black-face), ui-sans-serif, system-ui, sans-serif;
+  --font-inter: var(--font-inter-sans), ui-sans-serif, system-ui, sans-serif;
+
+  /* ---- Layout ---- */
+  --container-site: 1440px;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-halyard);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+}
+
+@utility container-site {
+  width: 100%;
+  max-width: var(--container-site);
+  margin-inline: auto;
+  padding-inline: 1.25rem;
+}
+
+/* Elementor-faithful section eyebrow / heading accent */
+@utility text-accent {
+  color: var(--color-primary);
+}
+
+@keyframes op-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.op-fade-up {
+  animation: op-fade-up 0.5s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .op-fade-up {
+    animation: none;
+  }
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+  }
+}
