@@ -172,9 +172,12 @@ export function ProductCustomizer({
           </button>
         </header>
 
-        <div className="grid flex-1 grid-cols-1 gap-6 overflow-y-auto p-5 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-8">
+        <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 overflow-y-auto p-5 lg:grid-cols-[minmax(0,1fr)_380px] lg:grid-rows-[minmax(0,1fr)] lg:gap-8 lg:overflow-hidden">
           {/* Preview */}
-          <section aria-label="Product preview" className="min-w-0">
+          <section
+            aria-label="Product preview"
+            className="min-w-0 lg:min-h-0 lg:self-start lg:max-h-full lg:overflow-y-auto lg:pr-1"
+          >
             <ProductCanvas
               config={config}
               printArea={customizer.activePrintArea}
@@ -218,7 +221,7 @@ export function ProductCustomizer({
           {/* Controls */}
           <section
             aria-label="Customization controls"
-            className="flex min-w-0 flex-col gap-6 rounded-xl border border-border bg-card p-5"
+            className="flex min-w-0 flex-col gap-6 rounded-xl border border-border bg-card p-5 lg:min-h-0 lg:overflow-y-auto"
           >
             <LogoUploader
               logo={customizer.logo}
