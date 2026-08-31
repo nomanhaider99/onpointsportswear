@@ -51,6 +51,12 @@ export function CartView() {
                   {item.name}
                 </Link>
                 <p className="mt-1 text-sm text-white/70">Size: {item.size}</p>
+                {item.customization && (
+                  <p className="mt-1 text-sm text-primary">
+                    Custom logo: {item.customization.logoFileName ?? "uploaded artwork"} ·{" "}
+                    {item.customization.printAreaName}
+                  </p>
+                )}
                 <p className="mt-1 text-sm text-white/70">{formatPrice(item.price)} each</p>
               </div>
 
@@ -131,8 +137,14 @@ export function CartView() {
           Taxes and shipping are confirmed when we quote your team order.
         </p>
         <Link
-          href="/contact"
+          href="/checkout"
           className="mt-6 flex justify-center rounded-lg bg-primary px-6 py-3 text-base text-primary-foreground transition-colors duration-300 hover:bg-[#029b36]"
+        >
+          Proceed to Checkout
+        </Link>
+        <Link
+          href="/contact"
+          className="mt-3 flex justify-center rounded-lg border border-primary px-6 py-3 text-base text-white transition-colors duration-300 hover:bg-primary hover:text-primary-foreground"
         >
           Request a Quote
         </Link>

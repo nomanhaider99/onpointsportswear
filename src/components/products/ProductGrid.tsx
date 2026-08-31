@@ -7,6 +7,7 @@ export function ProductGrid({
   columns = 2,
   showCategory = true,
   showAddToCart = true,
+  showCustomizableBadge = true,
   filled = true,
 }: {
   products: Product[];
@@ -14,6 +15,7 @@ export function ProductGrid({
   columns?: 2 | 3;
   showCategory?: boolean;
   showAddToCart?: boolean;
+  showCustomizableBadge?: boolean;
   filled?: boolean;
 }) {
   if (products.length === 0) {
@@ -33,6 +35,7 @@ export function ProductGrid({
           product={product}
           showCategory={showCategory}
           showAddToCart={showAddToCart}
+          showCustomizableBadge={showCustomizableBadge}
           filled={filled}
           priority={index < 2}
         />

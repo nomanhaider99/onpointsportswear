@@ -1,18 +1,31 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { CustomizerLauncher } from "@/components/customizer/CustomizerLauncher";
+import { getCustomizerConfig } from "@/data/customizer";
 import type { Product } from "@/data/products";
-import { useCart } from "@/lib/cart";
+import { getAddToCartIssue, useCart } from "@/lib/cart";
+import { handleAddCustomizedProduct, type ProductCustomization } from "@/lib/customization";
 import { formatPrice } from "@/lib/utils";
 
 export function ProductDetail({ product }: { product: Product }) {
-  const { addItem } = useCart();
+  const { addItem, items } = useCart();
   const [size, setSize] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [error, setError] = useState("");
   const [added, setAdded] = useState(false);
+  const [customization, setCustomization] = useState<ProductCustomization | null>(null);
   const timeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // null for products that are not customizable - the button stays hidden.
+  const customizerConfig = useMemo(() => getCustomizerConfig(product), [product]);
+
+  /**
+   * Blocks checkout for a customizable product with no logo applied, and for a
+   * product whose type does not match what is already in the cart.
+   */
+  const blockedReason = getAddToCartIssue(product, items, Boolean(customization));
 
   useEffect(() => {
     return () => {
@@ -27,12 +40,37 @@ export function ProductDetail({ product }: { product: Product }) {
 
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (blockedReason) {
+      setError(blockedReason);
+      return;
+    }
     if (!size) {
       setError("Please select a size before adding to cart.");
       return;
     }
     setError("");
-    addItem(product, size, quantity);
+
+    if (customization) {
+      const variation = product.sizes.find((entry) => entry.label === size);
+      const { summary } = handleAddCustomizedProduct({
+        product,
+        variant: variation ? { size: variation.label, price: variation.price } : undefined,
+        customization,
+        quantity,
+      });
+      const result = addItem(product, size, quantity, summary);
+      if (!result.ok) {
+        setError(result.reason ?? "This product could not be added to your cart.");
+        return;
+      }
+    } else {
+      const result = addItem(product, size, quantity);
+      if (!result.ok) {
+        setError(result.reason ?? "This product could not be added to your cart.");
+        return;
+      }
+    }
+
     setAdded(true);
     if (timeout.current) clearTimeout(timeout.current);
     timeout.current = setTimeout(() => setAdded(false), 2200);
@@ -62,6 +100,15 @@ export function ProductDetail({ product }: { product: Product }) {
           </span>
           <span aria-hidden="true">{priceLabel}</span>
         </p>
+
+        {customizerConfig && (
+          <CustomizerLauncher
+            product={product}
+            config={customizerConfig}
+            customization={customization}
+            onChange={setCustomization}
+          />
+        )}
 
         <form onSubmit={onSubmit}>
           <div className="flex flex-col gap-3 rounded-lg bg-white/[0.04] p-5 sm:flex-row sm:items-center sm:gap-6">
@@ -122,12 +169,19 @@ export function ProductDetail({ product }: { product: Product }) {
             />
             <button
               type="submit"
-              className="rounded-lg bg-primary px-[50px] py-[5px] text-base leading-8 text-primary-foreground transition-all duration-200 hover:bg-[#029b36]"
+              disabled={Boolean(blockedReason)}
+              aria-describedby={blockedReason ? "add-blocked" : undefined}
+              className="rounded-lg bg-primary px-[50px] py-[5px] text-base leading-8 text-primary-foreground transition-all duration-200 hover:bg-[#029b36] disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:bg-primary"
             >
               Add to cart
             </button>
+            {blockedReason && (
+              <p id="add-blocked" className="w-full text-sm text-[#ffb95e]">
+                {blockedReason}
+              </p>
+            )}
             <span aria-live="polite" className={added ? "text-sm text-primary" : "sr-only"}>
-              {added ? "Added to cart" : ""}
+              {added ? (customization ? "Added to cart with your logo" : "Added to cart") : ""}
             </span>
           </div>
         </form>

@@ -1,4 +1,15 @@
-export type ProductCategory = "Jerseys" | "Hoodies" | "Shorts" | "Accessories";
+import type { ProductCustomizerConfig } from "@/data/customizer";
+
+export type ProductCategory = "Jerseys" | "Hoodies" | "Shorts" | "T-Shirts" | "Accessories";
+
+/**
+ * The catalogue splits on two independent axes:
+ *  - `category`  - what the garment is (Jerseys, Hoodies, ...)
+ *  - `type`      - whether a customer can put their own logo on it
+ *
+ * "standard" products are sold as shown and never open the customizer.
+ */
+export type ProductType = "standard" | "customizable";
 
 export interface Product {
   id: string;
@@ -12,6 +23,17 @@ export interface Product {
   sizes: { label: string; price: number }[];
   /** Shown on the products archive / featured grid in source order. */
   featured: boolean;
+  /**
+   * Single source of truth for which of the two product types this is.
+   * `false` means standard: no Customize button, ever, whatever config exists.
+   */
+  customizable: boolean;
+  /**
+   * Per-product customizer config. Optional so records stay valid without it.
+   * When the backend starts returning this it takes priority over the mock
+   * config in `@/data/customizer`. See docs/customizer-handoff.md.
+   */
+  customizer?: ProductCustomizerConfig;
 }
 
 export const productCategories: Array<"All" | ProductCategory> = [
@@ -19,6 +41,7 @@ export const productCategories: Array<"All" | ProductCategory> = [
   "Jerseys",
   "Hoodies",
   "Shorts",
+  "T-Shirts",
   "Accessories",
 ];
 
@@ -36,6 +59,7 @@ export const products: Product[] = [
       { label: "MD", price: 35 },
     ],
     featured: true,
+    customizable: true,
   },
   {
     id: "pro-grade-athletic-team-hoodie",
@@ -50,6 +74,7 @@ export const products: Product[] = [
       { label: "MD", price: 85 },
     ],
     featured: true,
+    customizable: true,
   },
   {
     id: "custom-baseball-jersey-sublimation-embroidery",
@@ -64,6 +89,7 @@ export const products: Product[] = [
       { label: "MD", price: 88 },
     ],
     featured: true,
+    customizable: true,
   },
   {
     id: "custom-sublimated-soccer-jersey",
@@ -78,6 +104,7 @@ export const products: Product[] = [
       { label: "MD", price: 62 },
     ],
     featured: true,
+    customizable: true,
   },
   {
     id: "school-uniform-bundle-jersey-shorts-socks",
@@ -92,6 +119,7 @@ export const products: Product[] = [
       { label: "MD", price: 95 },
     ],
     featured: true,
+    customizable: false,
   },
   {
     id: "embroidered-team-polo",
@@ -106,6 +134,7 @@ export const products: Product[] = [
       { label: "MD", price: 44 },
     ],
     featured: true,
+    customizable: true,
   },
   {
     id: "custom-basketball-jersey-shorts-set",
@@ -120,6 +149,7 @@ export const products: Product[] = [
       { label: "MD", price: 80 },
     ],
     featured: true,
+    customizable: true,
   },
   {
     id: "custom-sublimated-hockey-jersey",
@@ -134,8 +164,44 @@ export const products: Product[] = [
       { label: "MD", price: 70 },
     ],
     featured: true,
+    customizable: true,
+  },
+  {
+    /**
+     * Blank-mockup product: its picture is the garment with no branding on it,
+     * which is what makes an uploaded logo read correctly in the customizer.
+     * Built from the supplied reference art - see docs/customizer-handoff.md.
+     */
+    id: "custom-printed-t-shirt",
+    slug: "custom-printed-t-shirt",
+    name: "Custom Printed T-Shirt",
+    category: "T-Shirts",
+    priceMin: 22,
+    priceMax: 30,
+    image: "/images/customizer/tshirt-mockup.png",
+    sizes: [
+      { label: "SM", price: 22 },
+      { label: "MD", price: 30 },
+    ],
+    featured: false,
+    customizable: true,
   },
 ];
+
+export const productTypes: Array<"All" | ProductType> = ["All", "customizable", "standard"];
+
+/** Human label for a product type, used on filters and card badges. */
+export const productTypeLabels: Record<ProductType, string> = {
+  customizable: "Customizable",
+  standard: "Standard",
+};
+
+export function getProductType(product: Product): ProductType {
+  return product.customizable ? "customizable" : "standard";
+}
+
+export const customizableProducts: Product[] = products.filter((p) => p.customizable);
+export const standardProducts: Product[] = products.filter((p) => !p.customizable);
 
 export function getProductBySlug(slug: string): Product | undefined {
   return products.find((product) => product.slug === slug);

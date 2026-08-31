@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { Sparkles } from "lucide-react";
 import type { Product } from "@/data/products";
 import { cn, formatPriceRange } from "@/lib/utils";
 
@@ -9,6 +10,7 @@ export function ProductCard({
   product,
   showCategory = true,
   showAddToCart = true,
+  showCustomizableBadge = true,
   filled = true,
   priority = false,
 }: {
@@ -16,6 +18,8 @@ export function ProductCard({
   /** The featured grid on the home page omits the category label. */
   showCategory?: boolean;
   showAddToCart?: boolean;
+  /** Off for the home featured grid, which stays exactly as designed. */
+  showCustomizableBadge?: boolean;
   /** The archive cards use a solid #111827 surface; the featured grid is transparent. */
   filled?: boolean;
   priority?: boolean;
@@ -29,7 +33,7 @@ export function ProductCard({
     >
       <Link
         href={`/products/${product.slug}`}
-        className="block overflow-hidden rounded-lg"
+        className="relative block overflow-hidden rounded-lg"
         tabIndex={-1}
         aria-hidden="true"
       >
@@ -42,6 +46,12 @@ export function ProductCard({
           sizes="(max-width: 767px) 100vw, (max-width: 1023px) 50vw, 33vw"
           className="h-[320px] w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
         />
+        {showCustomizableBadge && product.customizable && (
+          <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-md bg-primary px-2.5 py-1.5 font-[family-name:var(--font-inter)] text-[11px] font-bold uppercase tracking-wide text-primary-foreground">
+            <Sparkles size={12} aria-hidden="true" />
+            Customizable
+          </span>
+        )}
       </Link>
 
       <div className="flex flex-1 flex-col pt-4">
@@ -56,6 +66,9 @@ export function ProductCard({
             className="transition-colors duration-300 hover:text-primary"
           >
             {product.name}
+            {showCustomizableBadge && product.customizable && (
+              <span className="sr-only"> (customizable)</span>
+            )}
           </Link>
         </h3>
         <p className="mt-2.5 font-[family-name:var(--font-inter)] text-sm font-medium text-secondary">

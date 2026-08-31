@@ -11,7 +11,7 @@ const FOCUSABLE =
   'a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])';
 
 export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { items, subtotal, removeItem, incrementItem, decrementItem, clearCart } = useCart();
+  const { items, subtotal, removeItem, incrementItem, decrementItem } = useCart();
   const panelRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
 
@@ -112,6 +112,11 @@ export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => vo
                       {item.name}
                     </Link>
                     <p className="mt-0.5 text-sm text-white/70">Size: {item.size}</p>
+                    {item.customization && (
+                      <p className="mt-0.5 text-sm text-primary">
+                        Custom logo · {item.customization.printAreaName}
+                      </p>
+                    )}
                     <div className="mt-2 flex items-center gap-3">
                       <div className="flex items-center rounded-lg border border-primary">
                         <button
@@ -164,13 +169,13 @@ export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => vo
                 >
                   View Cart
                 </Link>
-                <button
-                  type="button"
-                  onClick={clearCart}
-                  className="rounded-lg bg-primary px-4 py-3 text-base text-primary-foreground transition-colors hover:bg-[#029b36]"
+                <Link
+                  href="/checkout"
+                  onClick={onClose}
+                  className="rounded-lg bg-primary px-4 py-3 text-center text-base text-primary-foreground transition-colors hover:bg-[#029b36]"
                 >
-                  Clear Cart
-                </button>
+                  Checkout
+                </Link>
               </div>
             </div>
           </>

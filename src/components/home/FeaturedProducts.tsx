@@ -19,7 +19,14 @@ export function FeaturedProducts() {
       </div>
 
       <div className="container-site mt-[25px]">
-        <ProductGrid products={featured} columns={3} showCategory={false} showAddToCart={false} filled={false} />
+        <ProductGrid
+          products={featured}
+          columns={3}
+          showCategory={false}
+          showAddToCart={false}
+          showCustomizableBadge={false}
+          filled={false}
+        />
       </div>
 
       <div className="container-site mt-6 flex justify-center">
