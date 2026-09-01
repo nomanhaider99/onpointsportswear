@@ -15,6 +15,12 @@
   --color-primary-soft: #00ac3b1f;
   --color-primary-line: #00ac3b40;
 
+  /* ---- Customizer surfaces: one ground, two steps up ---- */
+  --color-panel: #0e1425;
+  --color-raised: #171f33;
+  --color-hairline: #ffffff17;
+  --color-stage: #eef0f3;
+
   /* ---- Fonts ---- */
   --font-halyard: var(--font-halyard-book), ui-sans-serif, system-ui, sans-serif;
   --font-halyard-bold: var(--font-halyard-bold-face), ui-sans-serif, system-ui, sans-serif;
@@ -87,4 +93,103 @@
   *::after {
     transition-duration: 0.01ms !important;
   }
+}
+
+
+/* ---------------------------------------------------------------------------
+   Customizer instrument styling.
+
+   The customizer is the one surface on the site that behaves like a tool
+   rather than a page, so it gets tool furniture: thin scrollbars that do not
+   interrupt the panes, and range inputs drawn as a real filled track. Both are
+   scoped to their own classes so nothing else on the site inherits them.
+   --------------------------------------------------------------------------- */
+
+.op-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #ffffff26 transparent;
+}
+
+.op-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.op-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.op-scroll::-webkit-scrollbar-thumb {
+  background: #ffffff20;
+  border-radius: 999px;
+}
+
+.op-scroll::-webkit-scrollbar-thumb:hover {
+  background: #ffffff38;
+}
+
+/*
+ * Slider fill is driven by --op-fill, set inline from the control's own value,
+ * so the filled portion tracks the value in both engines without JS.
+ */
+.op-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 20px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.op-range::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--color-primary) 0 var(--op-fill, 0%),
+    #ffffff1f var(--op-fill, 0%) 100%
+  );
+}
+
+.op-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 16px;
+  width: 16px;
+  margin-top: -6px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 3px solid var(--color-primary);
+  box-shadow: 0 1px 4px #00000080;
+}
+
+.op-range::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: #ffffff1f;
+}
+
+.op-range::-moz-range-progress {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--color-primary);
+}
+
+.op-range::-moz-range-thumb {
+  height: 16px;
+  width: 16px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 3px solid var(--color-primary);
+  box-shadow: 0 1px 4px #00000080;
+}
+
+.op-range:focus-visible::-webkit-slider-thumb {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.op-range:focus-visible::-moz-range-thumb {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }

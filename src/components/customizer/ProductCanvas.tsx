@@ -62,27 +62,37 @@ export default function ProductCanvas({
   const containerRef = useRef<HTMLDivElement>(null);
   const logoRef = useRef<Konva.Image>(null);
   const transformerRef = useRef<Konva.Transformer>(null);
-  const [containerWidth, setContainerWidth] = useState(0);
+  const [box, setBox] = useState({ width: 0, height: 0 });
 
   const base = useImageElement(config.baseImage);
   const overlay = useImageElement(config.overlayImage);
   const logo = useImageElement(logoUrl ?? undefined);
 
-  // Track the available width so the stage can scale with the layout.
+  // Track the available box so the stage can scale with the layout.
   useLayoutEffect(() => {
     const element = containerRef.current;
     if (!element) return;
 
     const observer = new ResizeObserver((entries) => {
-      setContainerWidth(entries[0]?.contentRect.width ?? 0);
+      const rect = entries[0]?.contentRect;
+      setBox({ width: rect?.width ?? 0, height: rect?.height ?? 0 });
     });
     observer.observe(element);
-    setContainerWidth(element.clientWidth);
+    setBox({ width: element.clientWidth, height: element.clientHeight });
 
     return () => observer.disconnect();
   }, []);
 
-  const scale = containerWidth > 0 ? (containerWidth / config.baseWidth) * zoom : 0;
+  /*
+   * Fit to the shorter axis rather than to width alone. On a short viewport the
+   * pane is wide and flat, and a width-driven stage would push the proof bar
+   * off the bottom - the readout has to stay visible while the logo moves.
+   * Below lg the wrapper carries the design aspect ratio, so both axes agree
+   * and this collapses back to the width-driven fit.
+   */
+  const widthFit = box.width > 0 ? box.width / config.baseWidth : 0;
+  const heightFit = box.height > 0 ? box.height / config.baseHeight : Infinity;
+  const scale = widthFit > 0 ? Math.min(widthFit, heightFit) * zoom : 0;
   const stageWidth = config.baseWidth * scale;
   const stageHeight = config.baseHeight * scale;
 
@@ -202,19 +212,22 @@ export default function ProductCanvas({
 
   const center = transform ? centerOf(transform) : null;
   // Keep handles a comfortable touch size regardless of how the stage scales.
-  const anchorSize = scale > 0 ? clamp(14 / scale, 8, 28) : 12;
+  const anchorSize = scale > 0 ? clamp(11 / scale, 7, 22) : 11;
   const hairline = scale > 0 ? 1 / scale : 1;
 
   return (
     <div
       ref={containerRef}
-      className="w-full overflow-auto rounded-lg bg-white/[0.03]"
+      className="op-scroll flex h-full w-full overflow-auto bg-stage"
       role="application"
       aria-label={productName + " customization preview. Use the arrow keys to move your logo."}
       tabIndex={0}
       onKeyDown={handleKeyDown}
     >
       {scale > 0 && base.status === "loaded" ? (
+        // `m-auto` centres the stage but still lets it overflow when zoomed in,
+        // which flex centring alone would clip.
+        <div className="m-auto">
         <Stage
           ref={stageRef}
           width={stageWidth}
@@ -236,15 +249,32 @@ export default function ProductCanvas({
 
           {/* Print area guide + logo */}
           <Layer>
+            {/*
+              * The print-area guide is drawn as marching ants - a dark line
+              * under a white dashed one - so it stays readable over a black
+              * hoodie and a white tee alike, and it is deliberately not green:
+              * green marks the thing you are acting on, and the area is a
+              * passive boundary.
+              */}
             <Rect
               x={printArea.x}
               y={printArea.y}
               width={printArea.width}
               height={printArea.height}
-              stroke={PRIMARY}
+              stroke="#0b1020"
+              strokeWidth={hairline * 2.5}
+              opacity={0.3}
+              listening={false}
+            />
+            <Rect
+              x={printArea.x}
+              y={printArea.y}
+              width={printArea.width}
+              height={printArea.height}
+              stroke="#ffffff"
               strokeWidth={hairline}
-              dash={[6 * hairline, 5 * hairline]}
-              opacity={0.9}
+              dash={[5 * hairline, 4 * hairline]}
+              opacity={0.8}
               listening={false}
             />
 
@@ -294,20 +324,22 @@ export default function ProductCanvas({
               rotationSnaps={[0, 90, 180, 270]}
               rotationSnapTolerance={4}
               anchorSize={anchorSize}
-              anchorCornerRadius={anchorSize / 4}
+              anchorCornerRadius={anchorSize / 2}
               anchorFill="#ffffff"
               anchorStroke={PRIMARY}
               anchorStrokeWidth={hairline * 1.5}
               borderStroke={PRIMARY}
               borderStrokeWidth={hairline * 1.5}
+              rotateAnchorOffset={26 * hairline}
               boundBoxFunc={handleBoundBox}
             />
           </Layer>
         </Stage>
+        </div>
       ) : (
         <div
           style={{ aspectRatio: config.baseWidth + " / " + config.baseHeight }}
-          className="flex w-full items-center justify-center text-sm text-white/60"
+          className="m-auto flex w-full items-center justify-center font-inter text-[13px] text-black/40"
         >
           {base.status === "failed" ? "Preview image unavailable." : "Loading preview…"}
         </div>
