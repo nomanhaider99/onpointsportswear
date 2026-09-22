@@ -3,7 +3,8 @@ export const siteConfig = {
   title: "On Point Sportswear | Custom Sportswear",
   description:
     "Custom sportswear engineered in Ontario for leagues, schools & clubs across Canada & USA. Sublimation & embroidery with no minimums and fast turnaround.",
-  url: "https://onpointsportswear.com",
+  /** From NEXT_PUBLIC_WEB_URL / NEXT_PUBLIC_SITE_URL in .env */
+  url: String(process.env.NEXT_PUBLIC_WEB_URL || process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/$/, ""),
   email: "onpointpromotions23@gmail.com",
   phone: "647-805-5730",
   phoneHref: "tel:+16478055730",
@@ -21,4 +22,4 @@ export const siteConfig = {
     "Sublimation",
     "Embroidery",
   ],
-} as const;
+};

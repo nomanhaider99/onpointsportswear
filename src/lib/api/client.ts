@@ -1,5 +1,6 @@
-const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000/api").replace(/\/$/, "");
-export const API_ORIGIN = API_URL.replace(/\/api$/, "");
+import { API_URL, API_ORIGIN } from "@/lib/config";
+
+export { API_URL, API_ORIGIN } from "@/lib/config";
 
 const TOKEN_KEY = "op-auth-token";
 

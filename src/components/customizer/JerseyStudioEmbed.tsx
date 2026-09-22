@@ -2,14 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { JERSEY_STUDIO_URL } from "@/lib/config";
 import { designsApi, getStoredToken, uploadCustomPreview } from "@/lib/api/client";
 import { notify } from "@/lib/notify";
 import { removeCartItem, upsertStudioCartItem } from "@/store/features/cart/cartSlice";
 import { useAppDispatch } from "@/store/hooks";
 import type { CartItem } from "@/lib/cart";
 
-const STUDIO_ORIGIN =
-  process.env.NEXT_PUBLIC_JERSEY_STUDIO_URL || "http://127.0.0.1:5173";
+const STUDIO_ORIGIN = JERSEY_STUDIO_URL;
 
 type StudioMessage = {
   type?: string;
@@ -51,6 +51,7 @@ export function JerseyStudioEmbed() {
   const [ready, setReady] = useState(false);
 
   const iframeSrc = useMemo(() => {
+    if (!STUDIO_ORIGIN) return "";
     const qs = searchParams.toString();
     return qs ? `${STUDIO_ORIGIN}/?${qs}` : `${STUDIO_ORIGIN}/`;
   }, [searchParams]);
@@ -150,14 +151,19 @@ export function JerseyStudioEmbed() {
           </button>
         </div>
       </div>
-      {ready ? (
+      {ready && iframeSrc ? (
         <iframe
           title="Hockey jersey customizer"
           src={iframeSrc}
           className="h-full w-full flex-1 border-0 bg-[#0b1020]"
           allow="clipboard-write"
         />
-      ) : null}
+      ) : (
+        <div className="flex flex-1 items-center justify-center px-6 text-center text-sm text-white/70">
+          Set <code className="mx-1 text-white">NEXT_PUBLIC_JERSEY_STUDIO_URL</code> in{" "}
+          <code className="mx-1 text-white">onpointsportswear/.env</code> and restart the site.
+        </div>
+      )}
     </div>
   );
 }
