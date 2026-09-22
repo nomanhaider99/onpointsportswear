@@ -67,6 +67,10 @@ export interface CartItemCustomization {
   studio?: "jersey";
   designSummary?: string;
   designState?: Record<string, unknown>;
+  /** Uploaded jersey preview (S3 / API media URL). */
+  previewUrl?: string;
+  /** Local-only data URL before upload. */
+  previewDataUrl?: string;
 }
 
 /**

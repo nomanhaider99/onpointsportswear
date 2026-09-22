@@ -271,6 +271,32 @@ export const contactApi = {
   submit: (body: Record<string, unknown>) => api("/contact", { method: "POST", body }),
 };
 
+export const designsApi = {
+  list: () => api<{ designs: Record<string, unknown>[] }>("/designs"),
+  create: (body: Record<string, unknown>) =>
+    api<Record<string, unknown>>("/designs", { method: "POST", body }),
+};
+
+/** Upload a data-URL or remote image as a custom design preview. */
+export async function uploadCustomPreview(dataUrl: string, filename = `jersey-${Date.now()}.jpg`) {
+  if (!dataUrl) return "";
+  const token = getStoredToken();
+  const form = new FormData();
+  if (dataUrl.startsWith("data:")) {
+    const res = await fetch(dataUrl);
+    const blob = await res.blob();
+    form.append("file", blob, filename);
+  } else {
+    form.append("file", dataUrl);
+  }
+  const headers: Record<string, string> = { Accept: "application/json" };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const response = await fetch(`${API_URL}/uploads/custom`, { method: "POST", headers, body: form });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.message || "Could not upload design preview");
+  return String(data.url || data.previewUrl || "");
+}
+
 export const searchApi = {
   query: (q: string, type = "products") => api<{ products?: unknown[]; categories?: unknown[] }>("/search", { query: { q, type, limit: 12 } }),
 };

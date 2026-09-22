@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { designsApi, getStoredToken, uploadCustomPreview } from "@/lib/api/client";
 import { notify } from "@/lib/notify";
 import { removeCartItem, upsertStudioCartItem } from "@/store/features/cart/cartSlice";
 import { useAppDispatch } from "@/store/hooks";
@@ -9,6 +10,39 @@ import type { CartItem } from "@/lib/cart";
 
 const STUDIO_ORIGIN =
   process.env.NEXT_PUBLIC_JERSEY_STUDIO_URL || "http://127.0.0.1:5173";
+
+type StudioMessage = {
+  type?: string;
+  cartItem?: CartItem;
+  key?: string;
+  previewDataUrl?: string;
+  design?: { id?: string; name?: string; state?: unknown; previewDataUrl?: string };
+  product?: { id?: string; _id?: string; size?: string; price?: number; name?: string };
+};
+
+async function persistStudioDesign(data: StudioMessage) {
+  const token = getStoredToken();
+  if (!token) {
+    notify.error("Sign in to save designs to your account");
+    return null;
+  }
+  const previewRaw = data.previewDataUrl || data.design?.previewDataUrl || "";
+  let previewUrl = "";
+  if (previewRaw) {
+    previewUrl = await uploadCustomPreview(previewRaw);
+  }
+  const productId = data.product?.id || data.product?._id || data.cartItem?.productId || "studio-jersey";
+  return designsApi.create({
+    productId,
+    name: data.design?.name || data.product?.name || "Custom Design",
+    previewUrl,
+    size: data.product?.size || data.cartItem?.size || "",
+    price: Number(data.product?.price || data.cartItem?.price || 0),
+    designState: data.design?.state || null,
+    customization: { studio: "jersey", designId: data.design?.id },
+    studio: "jersey",
+  });
+}
 
 export function JerseyStudioEmbed() {
   const searchParams = useSearchParams();
@@ -22,16 +56,58 @@ export function JerseyStudioEmbed() {
   }, [searchParams]);
 
   useEffect(() => {
-    function onMessage(event: MessageEvent) {
-      const data = event.data as {
-        type?: string;
-        cartItem?: CartItem;
-        key?: string;
-      };
+    async function onMessage(event: MessageEvent) {
+      const data = event.data as StudioMessage;
       if (!data || typeof data !== "object" || !data.type) return;
 
+      if (data.type === "op-jersey-save-design") {
+        try {
+          await persistStudioDesign(data);
+          notify.success("Design saved to your account");
+        } catch (error) {
+          notify.error(error instanceof Error ? error.message : "Could not save design");
+        }
+        return;
+      }
+
       if (data.type === "op-jersey-add-to-cart" && data.cartItem) {
-        dispatch(upsertStudioCartItem(data.cartItem));
+        let line = data.cartItem;
+        const previewRaw = data.previewDataUrl || data.design?.previewDataUrl || "";
+        try {
+          if (getStoredToken()) {
+            const saved = await persistStudioDesign(data);
+            const previewUrl =
+              (saved?.previewUrl as string) ||
+              (previewRaw.startsWith("http") ? previewRaw : "");
+            if (previewUrl) {
+              line = {
+                ...line,
+                image: previewUrl,
+                customization: {
+                  ...(line.customization || {}),
+                  previewUrl,
+                  studio: "jersey",
+                },
+              };
+            }
+          } else if (previewRaw) {
+            line = {
+              ...line,
+              image: previewRaw,
+              customization: {
+                ...(line.customization || {}),
+                previewDataUrl: previewRaw,
+                studio: "jersey",
+              },
+            };
+          }
+        } catch {
+          /* cart still proceeds with local preview */
+          if (previewRaw) {
+            line = { ...line, image: previewRaw };
+          }
+        }
+        dispatch(upsertStudioCartItem(line));
         notify.success("Design added to cart");
         return;
       }
