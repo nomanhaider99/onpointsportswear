@@ -63,6 +63,10 @@ export interface CartItemCustomization {
   printAreaName: string;
   logoFileName?: string;
   transform: LogoTransform;
+  /** Present when the line came from the hockey jersey Vite studio. */
+  studio?: "jersey";
+  designSummary?: string;
+  designState?: Record<string, unknown>;
 }
 
 /**

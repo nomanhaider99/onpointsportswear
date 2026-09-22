@@ -1,14 +1,21 @@
 "use client";
 
-import { useCallback, useMemo, useSyncExternalStore } from "react";
+import { useCallback, useMemo } from "react";
 import { isCustomizable } from "@/data/customizer";
 import type { Product } from "@/data/products";
 import type { CartItemCustomization } from "@/lib/customization";
-
-const STORAGE_KEY = "op-cart-v1";
+import { notify } from "@/lib/notify";
+import {
+  addCartItem,
+  clearCart as clearCartAction,
+  decrementCartItem,
+  incrementCartItem,
+  removeCartItem,
+  updateCartQuantity,
+} from "@/store/features/cart/cartSlice";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
 export interface CartItem {
-  /** Unique per product + size combination. */
   key: string;
   slug: string;
   name: string;
@@ -16,136 +23,19 @@ export interface CartItem {
   price: number;
   image: string;
   quantity: number;
-  /**
-   * Present only on customized lines. Deliberately a lightweight summary - the
-   * logo file and its object URL stay in memory in @/lib/customization rather
-   * than in localStorage.
-   */
+  productId?: string;
+  originalPrice?: number;
   customization?: CartItemCustomization;
-  /**
-   * Whether this line is a custom-logo product. Optional because carts stored
-   * before this field existed are all standard lines; absent reads as false.
-   */
   customizable?: boolean;
 }
 
-/**
- * localStorage is an external store, so the cart lives outside React and is read
- * through useSyncExternalStore. The server snapshot is always empty, which is
- * what the server renders, so hydration matches and the persisted cart appears
- * on the first client render after hydration.
- */
-
-const EMPTY: CartItem[] = [];
-
-let items: CartItem[] = EMPTY;
-let initialized = false;
-const listeners = new Set<() => void>();
-
-function isCartItemCustomization(value: unknown): value is CartItemCustomization {
-  if (typeof value !== "object" || value === null) return false;
-  const entry = value as Record<string, unknown>;
-  return (
-    typeof entry.customizationId === "string" &&
-    typeof entry.printAreaId === "string" &&
-    typeof entry.transform === "object" &&
-    entry.transform !== null
-  );
-}
-
-function isCartItem(value: unknown): value is CartItem {
-  if (typeof value !== "object" || value === null) return false;
-  const item = value as Record<string, unknown>;
-  return (
-    typeof item.key === "string" &&
-    typeof item.slug === "string" &&
-    typeof item.name === "string" &&
-    typeof item.size === "string" &&
-    typeof item.price === "number" &&
-    typeof item.image === "string" &&
-    typeof item.quantity === "number" &&
-    item.quantity > 0 &&
-    // Optional, so undefined is valid; anything else must be well formed.
-    (item.customization === undefined || isCartItemCustomization(item.customization)) &&
-    (item.customizable === undefined || typeof item.customizable === "boolean")
-  );
-}
-
-function readStoredCart(): CartItem[] {
-  if (typeof window === "undefined") return EMPTY;
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return EMPTY;
-    const parsed: unknown = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return EMPTY;
-    const valid = parsed.filter(isCartItem);
-    return valid.length > 0 ? valid : EMPTY;
-  } catch {
-    return EMPTY;
-  }
-}
-
-function persist() {
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-  } catch {
-    /* storage unavailable (private mode / quota) - the cart still works in-session */
-  }
-}
-
-function emit() {
-  for (const listener of listeners) listener();
-}
-
-function setItems(next: CartItem[]) {
-  items = next;
-  persist();
-  emit();
-}
-
-function onStorage(event: StorageEvent) {
-  if (event.key !== STORAGE_KEY) return;
-  // Another tab changed the cart - adopt its value without writing back.
-  items = readStoredCart();
-  emit();
-}
-
-function subscribe(listener: () => void) {
-  if (listeners.size === 0) window.addEventListener("storage", onStorage);
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-    if (listeners.size === 0) window.removeEventListener("storage", onStorage);
-  };
-}
-
-function getSnapshot(): CartItem[] {
-  if (!initialized) {
-    initialized = true;
-    items = readStoredCart();
-  }
-  return items;
-}
-
-function getServerSnapshot(): CartItem[] {
-  return EMPTY;
-}
-
-function makeKey(slug: string, size: string, customizationId?: string) {
-  // Each customized line is its own row; plain lines still merge as before.
-  return customizationId ? `${slug}::${size}::${customizationId}` : `${slug}::${size}`;
-}
-
-/**
- * Two ordering rules, enforced here rather than only in the UI so no caller can
- * route around them:
- *
- *  1. A customizable product cannot be ordered without an applied logo.
- *  2. A cart holds custom-logo items or standard items, never both - they are
- *     produced and quoted differently, so they need separate orders.
- */
-
 export type CartKind = "empty" | "standard" | "customizable";
+
+/** List price when the line is on sale; otherwise 0. */
+export function cartItemCompareAt(item: CartItem, catalogOriginal?: number) {
+  const original = Number(item.originalPrice || catalogOriginal || 0);
+  return original > item.price ? original : 0;
+}
 
 export function getCartKind(entries: CartItem[]): CartKind {
   if (entries.length === 0) return "empty";
@@ -161,27 +51,16 @@ export function getMixMessage(incoming: CartKind): string {
     : "Your cart has custom-logo items. Standard products must be ordered separately - check out or clear your cart first.";
 }
 
-/**
- * Why this product cannot be added right now, or null when it can be.
- * Exported so buttons can disable themselves and explain, before any click.
- */
 export function getAddToCartIssue(
   product: Product,
   entries: CartItem[],
   hasCustomization = false,
 ): string | null {
-  // A product flagged customizable but with no usable print areas stays a
-  // normal product, so it never becomes unbuyable.
   const needsLogo = isCustomizable(product);
-
-  // The cart conflict comes first: otherwise a customer would be told to add a
-  // logo for something they could not order anyway.
   const kind = getCartKind(entries);
   const incoming: CartKind = needsLogo ? "customizable" : "standard";
   if (kind !== "empty" && kind !== incoming) return getMixMessage(incoming);
-
   if (needsLogo && !hasCustomization) return MISSING_LOGO_MESSAGE;
-
   return null;
 }
 
@@ -191,7 +70,8 @@ export interface AddItemResult {
 }
 
 export function useCart() {
-  const currentItems = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const dispatch = useAppDispatch();
+  const currentItems = useAppSelector((state) => state.cart.items);
 
   const addItem = useCallback(
     (
@@ -200,67 +80,51 @@ export function useCart() {
       quantity = 1,
       customization?: CartItemCustomization,
     ): AddItemResult => {
-      const issue = getAddToCartIssue(product, items, Boolean(customization));
-      if (issue) return { ok: false, reason: issue };
-
-      const variation = product.sizes.find((entry) => entry.label === size);
-      const price = variation ? variation.price : product.priceMin;
-      const key = makeKey(product.slug, size, customization?.customizationId);
-      const existing = items.find((item) => item.key === key);
-
-      if (existing) {
-        setItems(
-          items.map((item) =>
-            item.key === key ? { ...item, quantity: item.quantity + quantity } : item,
-          ),
-        );
-        return { ok: true };
+      const issue = getAddToCartIssue(product, currentItems, Boolean(customization));
+      if (issue) {
+        notify.error(issue);
+        return { ok: false, reason: issue };
       }
-
-      setItems([
-        ...items,
-        {
-          key,
-          slug: product.slug,
-          name: product.name,
-          size,
-          price,
-          image: product.image,
-          quantity,
-          customizable: isCustomizable(product),
-          ...(customization ? { customization } : {}),
-        },
-      ]);
+      dispatch(addCartItem({ product, size, quantity, customization }));
+      notify.success(`${product.name} added to cart`);
       return { ok: true };
     },
-    [],
+    [dispatch, currentItems],
   );
 
-  const removeItem = useCallback((key: string) => {
-    setItems(items.filter((item) => item.key !== key));
-  }, []);
+  const removeItem = useCallback(
+    (key: string) => {
+      dispatch(removeCartItem(key));
+      notify.info("Item removed from cart");
+    },
+    [dispatch],
+  );
 
-  const updateQuantity = useCallback((key: string, quantity: number) => {
-    if (quantity <= 0) {
-      setItems(items.filter((item) => item.key !== key));
-      return;
-    }
-    setItems(items.map((item) => (item.key === key ? { ...item, quantity } : item)));
-  }, []);
+  const updateQuantity = useCallback(
+    (key: string, quantity: number) => {
+      dispatch(updateCartQuantity({ key, quantity }));
+    },
+    [dispatch],
+  );
 
-  const incrementItem = useCallback((key: string) => {
-    setItems(items.map((item) => (item.key === key ? { ...item, quantity: item.quantity + 1 } : item)));
-  }, []);
+  const incrementItem = useCallback(
+    (key: string) => {
+      dispatch(incrementCartItem(key));
+    },
+    [dispatch],
+  );
 
-  const decrementItem = useCallback((key: string) => {
-    setItems(
-      items
-        .map((item) => (item.key === key ? { ...item, quantity: item.quantity - 1 } : item))
-        .filter((item) => item.quantity > 0),
-    );
-  }, []);
+  const decrementItem = useCallback(
+    (key: string) => {
+      dispatch(decrementCartItem(key));
+    },
+    [dispatch],
+  );
 
-  const clearCart = useCallback(() => setItems(EMPTY), []);
+  const clearCart = useCallback((options?: { silent?: boolean }) => {
+    dispatch(clearCartAction());
+    if (!options?.silent) notify.info("Cart cleared");
+  }, [dispatch]);
 
   const { count, subtotal } = useMemo(
     () => ({

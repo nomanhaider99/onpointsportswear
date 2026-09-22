@@ -4,6 +4,8 @@ import localFont from "next/font/local";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { siteConfig } from "@/data/site";
+import { StoreProvider } from "@/store/StoreProvider";
+import { AppToaster } from "@/components/ui/AppToaster";
 import "./globals.css";
 
 /**
@@ -65,8 +67,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html
       lang="en"
       className={`${halyardBook.variable} ${halyardBold.variable} ${halyardBlack.variable} ${inter.variable}`}
+      suppressHydrationWarning
     >
-      <body>
+      <body suppressHydrationWarning>
+        <StoreProvider>
         <a
           href="#content"
           className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-100 focus:rounded focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground"
@@ -76,6 +80,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Header />
         <main id="content">{children}</main>
         <Footer />
+        <AppToaster />
+        </StoreProvider>
       </body>
     </html>
   );

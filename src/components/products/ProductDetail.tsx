@@ -1,12 +1,13 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { CustomizerLauncher } from "@/components/customizer/CustomizerLauncher";
-import { getCustomizerConfig } from "@/data/customizer";
+import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
+import { Sparkles } from "lucide-react";
 import type { Product } from "@/data/products";
 import { getAddToCartIssue, useCart } from "@/lib/cart";
-import { handleAddCustomizedProduct, type ProductCustomization } from "@/lib/customization";
+import { jerseyStudioHref, usesJerseyStudio } from "@/lib/jersey-studio";
+import { notify } from "@/lib/notify";
 import { formatPrice } from "@/lib/utils";
 
 export function ProductDetail({ product }: { product: Product }) {
@@ -15,17 +16,17 @@ export function ProductDetail({ product }: { product: Product }) {
   const [quantity, setQuantity] = useState(1);
   const [error, setError] = useState("");
   const [added, setAdded] = useState(false);
-  const [customization, setCustomization] = useState<ProductCustomization | null>(null);
   const timeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const openStudio = usesJerseyStudio(product);
 
-  // null for products that are not customizable - the button stays hidden.
-  const customizerConfig = useMemo(() => getCustomizerConfig(product), [product]);
+  useEffect(() => {
+    setSize(product.sizes[0]?.label || "");
+    setError("");
+  }, [product.id]);
 
-  /**
-   * Blocks checkout for a customizable product with no logo applied, and for a
-   * product whose type does not match what is already in the cart.
-   */
-  const blockedReason = getAddToCartIssue(product, items, Boolean(customization));
+  const blockedReason = openStudio
+    ? "Open the customizer to design and add this product to your cart."
+    : getAddToCartIssue(product, items, false);
 
   useEffect(() => {
     return () => {
@@ -34,41 +35,35 @@ export function ProductDetail({ product }: { product: Product }) {
   }, []);
 
   const selected = product.sizes.find((entry) => entry.label === size);
-  const priceLabel = selected
-    ? formatPrice(selected.price)
-    : `${formatPrice(product.priceMin)} – ${formatPrice(product.priceMax)}`;
+  const unitPrice = selected?.price ?? product.priceMin;
+  const showRange = !selected && product.priceMin !== product.priceMax;
+  const priceLabel = showRange
+    ? `${formatPrice(product.priceMin)} – ${formatPrice(product.priceMax)}`
+    : formatPrice(unitPrice);
+  const compareAt = product.originalPrice && product.originalPrice > unitPrice ? product.originalPrice : 0;
 
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (openStudio) {
+      notify.info("Use Customize to design and add this item.");
+      return;
+    }
     if (blockedReason) {
+      notify.error(blockedReason);
       setError(blockedReason);
       return;
     }
     if (!size) {
+      notify.error("Please select a size before adding to cart.");
       setError("Please select a size before adding to cart.");
       return;
     }
     setError("");
 
-    if (customization) {
-      const variation = product.sizes.find((entry) => entry.label === size);
-      const { summary } = handleAddCustomizedProduct({
-        product,
-        variant: variation ? { size: variation.label, price: variation.price } : undefined,
-        customization,
-        quantity,
-      });
-      const result = addItem(product, size, quantity, summary);
-      if (!result.ok) {
-        setError(result.reason ?? "This product could not be added to your cart.");
-        return;
-      }
-    } else {
-      const result = addItem(product, size, quantity);
-      if (!result.ok) {
-        setError(result.reason ?? "This product could not be added to your cart.");
-        return;
-      }
+    const result = addItem(product, size, quantity);
+    if (!result.ok) {
+      setError(result.reason ?? "This product could not be added to your cart.");
+      return;
     }
 
     setAdded(true);
@@ -78,15 +73,14 @@ export function ProductDetail({ product }: { product: Product }) {
 
   return (
     <div className="container-site grid gap-10 lg:grid-cols-2 lg:gap-12">
-      <div className="overflow-hidden rounded-lg">
+      <div className="relative h-[320px] overflow-hidden rounded-lg bg-card sm:h-[380px] lg:h-[420px]">
         <Image
           src={product.image}
           alt={product.name}
-          width={720}
-          height={400}
+          fill
           priority
           sizes="(max-width: 1023px) 100vw, 48vw"
-          className="h-auto w-full object-cover"
+          className="object-cover object-center"
         />
       </div>
 
@@ -95,57 +89,57 @@ export function ProductDetail({ product }: { product: Product }) {
           {product.name}
         </h1>
         <p className="text-[30px] font-extrabold text-primary">
-          <span className="sr-only">
-            Price range {formatPrice(product.priceMin)} through {formatPrice(product.priceMax)}
-          </span>
-          <span aria-hidden="true">{priceLabel}</span>
+          {compareAt > 0 ? (
+            <>
+              <span className="mr-3 text-lg font-medium text-white/45 line-through">{formatPrice(compareAt)}</span>
+              <span aria-hidden="true">{priceLabel}</span>
+            </>
+          ) : (
+            <span aria-hidden="true">{priceLabel}</span>
+          )}
         </p>
 
-        {customizerConfig && (
-          <CustomizerLauncher
-            product={product}
-            config={customizerConfig}
-            customization={customization}
-            onChange={setCustomization}
-          />
-        )}
+        {openStudio ? (
+          <div className="rounded-lg border border-[var(--color-primary-line)] bg-primary-soft p-5">
+            <p className="text-base font-medium text-white">Product customizer</p>
+            <p className="mt-1 text-sm text-white/70">
+              Design colors, patterns, logos, names, and socks — then add to cart and checkout like
+              any other custom order.
+            </p>
+            <Link
+              href={jerseyStudioHref(product, size)}
+              className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-[#029b36]"
+            >
+              <Sparkles size={16} aria-hidden="true" />
+              Customize This Product
+            </Link>
+          </div>
+        ) : null}
 
         <form onSubmit={onSubmit}>
-          <div className="flex flex-col gap-3 rounded-lg bg-white/[0.04] p-5 sm:flex-row sm:items-center sm:gap-6">
-            <label htmlFor="size" className="text-xl font-medium text-white sm:w-32 sm:shrink-0">
-              Size
-            </label>
-            <div className="flex-1">
-              <select
-                id="size"
-                name="size"
-                value={size}
-                onChange={(event) => {
-                  setSize(event.target.value);
-                  if (event.target.value) setError("");
-                }}
-                aria-describedby={error ? "size-error" : undefined}
-                aria-invalid={error ? true : undefined}
-                className="w-full rounded-lg border border-primary bg-transparent py-2.5 pl-2.5 pr-8 text-lg text-white"
-              >
-                <option value="" className="bg-background text-white">
-                  Choose an option
-                </option>
-                {product.sizes.map((entry) => (
-                  <option key={entry.label} value={entry.label} className="bg-background text-white">
+          <div className="flex flex-col gap-3 rounded-lg bg-white/[0.04] p-5">
+            <p className="text-xl font-medium text-white">Size</p>
+            <div className="flex flex-wrap gap-2" role="group" aria-label="Size">
+              {product.sizes.map((entry) => {
+                const active = entry.label === size;
+                return (
+                  <button
+                    key={entry.label}
+                    type="button"
+                    onClick={() => {
+                      setSize(entry.label);
+                      setError("");
+                    }}
+                    className={`min-w-12 rounded-lg border px-4 py-2.5 text-base font-semibold transition-colors ${
+                      active
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-white/20 bg-transparent text-white hover:border-primary"
+                    }`}
+                  >
                     {entry.label}
-                  </option>
-                ))}
-              </select>
-              {size && (
-                <button
-                  type="button"
-                  onClick={() => setSize("")}
-                  className="mt-2 text-sm text-white/70 underline transition-colors hover:text-primary"
-                >
-                  Clear
-                </button>
-              )}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -155,35 +149,41 @@ export function ProductDetail({ product }: { product: Product }) {
             </p>
           )}
 
-          <div className="mt-6 flex flex-wrap items-center gap-3">
-            <input
-              type="number"
-              min={1}
-              value={quantity}
-              aria-label={`${product.name} quantity`}
-              onChange={(event) => {
-                const next = Number.parseInt(event.target.value, 10);
-                setQuantity(Number.isNaN(next) || next < 1 ? 1 : next);
-              }}
-              className="w-16 rounded-lg border border-primary bg-transparent py-2 text-center text-base text-white"
-            />
-            <button
-              type="submit"
-              disabled={Boolean(blockedReason)}
-              aria-describedby={blockedReason ? "add-blocked" : undefined}
-              className="rounded-lg bg-primary px-[50px] py-[5px] text-base leading-8 text-primary-foreground transition-all duration-200 hover:bg-[#029b36] disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:bg-primary"
-            >
-              Add to cart
-            </button>
-            {blockedReason && (
-              <p id="add-blocked" className="w-full text-sm text-[#ffb95e]">
-                {blockedReason}
-              </p>
-            )}
-            <span aria-live="polite" className={added ? "text-sm text-primary" : "sr-only"}>
-              {added ? (customization ? "Added to cart with your logo" : "Added to cart") : ""}
-            </span>
-          </div>
+          {!openStudio ? (
+            <div className="mt-6 flex flex-wrap items-center gap-3">
+              <input
+                type="number"
+                min={1}
+                value={quantity}
+                aria-label={`${product.name} quantity`}
+                onChange={(event) => {
+                  const next = Number.parseInt(event.target.value, 10);
+                  setQuantity(Number.isNaN(next) || next < 1 ? 1 : next);
+                }}
+                className="w-16 rounded-lg border border-primary bg-transparent py-2 text-center text-base text-white"
+              />
+              <button
+                type="submit"
+                disabled={Boolean(blockedReason)}
+                aria-describedby={blockedReason ? "add-blocked" : undefined}
+                className="rounded-lg bg-primary px-[50px] py-[5px] text-base leading-8 text-primary-foreground transition-all duration-200 hover:bg-[#029b36] disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:bg-primary"
+              >
+                Add to cart
+              </button>
+              {blockedReason && (
+                <p id="add-blocked" className="w-full text-sm text-[#ffb95e]">
+                  {blockedReason}
+                </p>
+              )}
+              <span aria-live="polite" className={added ? "text-sm text-primary" : "sr-only"}>
+                {added ? "Added to cart" : ""}
+              </span>
+            </div>
+          ) : (
+            <p className="mt-4 text-sm text-white/60">
+              Pick a size, then open Customize. Cart and checkout use the same shop flow and database.
+            </p>
+          )}
         </form>
       </div>
     </div>

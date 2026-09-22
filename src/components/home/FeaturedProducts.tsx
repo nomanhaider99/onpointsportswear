@@ -1,11 +1,24 @@
+"use client";
+
+import { useEffect } from "react";
 import { Section } from "@/components/ui/Section";
 import { Eyebrow, SectionHeading } from "@/components/ui/SectionHeading";
 import { ButtonLink } from "@/components/ui/Button";
 import { ProductGrid } from "@/components/products/ProductGrid";
-import { products } from "@/data/products";
+import { fetchShopCatalog } from "@/store/features/catalog/catalogSlice";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
 export function FeaturedProducts() {
-  const featured = products.filter((product) => product.featured);
+  const dispatch = useAppDispatch();
+  const featured = useAppSelector((state) => state.catalog.featured);
+  const products = useAppSelector((state) => state.catalog.products);
+  const loading = useAppSelector((state) => state.catalog.loading);
+
+  useEffect(() => {
+    dispatch(fetchShopCatalog());
+  }, [dispatch]);
+
+  const visible = (featured.length ? featured : products).slice(0, 6);
 
   return (
     <Section tinted>
@@ -19,14 +32,18 @@ export function FeaturedProducts() {
       </div>
 
       <div className="container-site mt-[25px]">
-        <ProductGrid
-          products={featured}
-          columns={3}
-          showCategory={false}
-          showAddToCart={false}
-          showCustomizableBadge={false}
-          filled={false}
-        />
+        {loading && visible.length === 0 ? (
+          <p className="text-center text-white/70">Loading products…</p>
+        ) : (
+          <ProductGrid
+            products={visible}
+            columns={3}
+            showCategory={false}
+            showAddToCart={false}
+            showCustomizableBadge={false}
+            filled={false}
+          />
+        )}
       </div>
 
       <div className="container-site mt-6 flex justify-center">

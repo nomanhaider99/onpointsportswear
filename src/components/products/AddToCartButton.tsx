@@ -2,16 +2,15 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { isCustomizable } from "@/data/customizer";
 import type { Product } from "@/data/products";
 import { useCart } from "@/lib/cart";
+import { jerseyStudioHref } from "@/lib/jersey-studio";
 
 /**
  * Archive-card add-to-cart. The source adds the default (smallest) variation
  * straight from the grid; size selection lives on the product detail page.
  *
- * A customizable product cannot be added from here at all: it needs a logo
- * first, so the card sends the customer to the product page instead.
+ * A customizable product opens the jersey studio instead of adding from the grid.
  */
 
 const buttonClass =
@@ -29,9 +28,9 @@ export function AddToCartButton({ product }: { product: Product }) {
     };
   }, []);
 
-  if (isCustomizable(product)) {
+  if (product.customizable) {
     return (
-      <Link href={`/products/${product.slug}`} className={buttonClass}>
+      <Link href={jerseyStudioHref(product)} className={buttonClass}>
         Customize
         <span className="sr-only"> {product.name}</span>
       </Link>

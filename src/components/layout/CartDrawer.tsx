@@ -4,14 +4,22 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { X, Minus, Plus, Trash2 } from "lucide-react";
-import { useCart } from "@/lib/cart";
+import { cartItemCompareAt, useCart } from "@/lib/cart";
 import { formatPrice } from "@/lib/utils";
+import { useAppSelector } from "@/store/hooks";
 
 const FOCUSABLE =
   'a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])';
 
 export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { items, subtotal, removeItem, incrementItem, decrementItem } = useCart();
+  const catalog = useAppSelector((state) => state.catalog.products);
+  const originalTotal = items.reduce((sum, item) => {
+    const listed = catalog.find((product) => product.slug === item.slug)?.originalPrice;
+    const compare = cartItemCompareAt(item, listed);
+    return sum + (compare || item.price) * item.quantity;
+  }, 0);
+  const discount = Math.max(0, originalTotal - subtotal);
   const panelRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
 
@@ -91,7 +99,12 @@ export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => vo
         ) : (
           <>
             <ul className="flex-1 overflow-y-auto px-5 py-4">
-              {items.map((item) => (
+              {items.map((item) => {
+                const compare = cartItemCompareAt(
+                  item,
+                  catalog.find((product) => product.slug === item.slug)?.originalPrice,
+                );
+                return (
                 <li
                   key={item.key}
                   className="flex gap-3 border-b border-border py-4 last:border-b-0"
@@ -139,7 +152,12 @@ export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => vo
                           <Plus size={14} aria-hidden="true" />
                         </button>
                       </div>
-                      <span className="text-sm font-semibold text-primary">
+                      <span className="text-right text-sm font-semibold text-primary">
+                        {compare > 0 ? (
+                          <span className="mb-0.5 block text-xs font-normal text-white/45 line-through">
+                            {formatPrice(compare * item.quantity)}
+                          </span>
+                        ) : null}
                         {formatPrice(item.price * item.quantity)}
                       </span>
                       <button
@@ -153,10 +171,17 @@ export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => vo
                     </div>
                   </div>
                 </li>
-              ))}
+              );
+              })}
             </ul>
 
             <div className="border-t border-border px-5 py-4">
+              {discount > 0 ? (
+                <div className="mb-2 flex items-center justify-between text-sm">
+                  <span className="text-[#dddddd]">Discount</span>
+                  <span className="font-semibold text-primary">-{formatPrice(discount)}</span>
+                </div>
+              ) : null}
               <div className="flex items-center justify-between text-base">
                 <span className="text-[#dddddd]">Subtotal</span>
                 <span className="font-semibold text-primary">{formatPrice(subtotal)}</span>

@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Section } from "@/components/ui/Section";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { CartView } from "@/components/cart/CartView";
+import { JerseyCartImport } from "@/components/cart/JerseyCartImport";
 
 export const metadata: Metadata = {
   title: "Cart",
@@ -19,6 +21,9 @@ export default function CartPage() {
         </SectionHeading>
       </div>
       <div className="container-site mt-[50px]">
+        <Suspense fallback={null}>
+          <JerseyCartImport />
+        </Suspense>
         <CartView />
       </div>
     </Section>

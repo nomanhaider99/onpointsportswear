@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
+import { notify } from "@/lib/notify";
 import type { UploadedLogo } from "@/lib/customization";
 
 /**
@@ -68,6 +69,7 @@ export function useLogoUpload({ allowedFileTypes, maxFileSizeMB }: Options) {
         setError(
           `Please upload a ${extensionLabel(allowedFileTypes)} image under ${maxFileSizeMB}MB.`,
         );
+        notify.error(`Please upload a ${extensionLabel(allowedFileTypes)} image under ${maxFileSizeMB}MB.`);
         return null;
       }
 
@@ -89,6 +91,7 @@ export function useLogoUpload({ allowedFileTypes, maxFileSizeMB }: Options) {
           setError(
             "That image has no fixed dimensions. Re-export it with a set width and height, or upload a PNG.",
           );
+          notify.error("That image has no fixed dimensions. Re-export it as a PNG with a set width and height.");
           return null;
         }
 
@@ -110,6 +113,7 @@ export function useLogoUpload({ allowedFileTypes, maxFileSizeMB }: Options) {
       } catch {
         URL.revokeObjectURL(url);
         setError("That file could not be opened as an image. Please try another file.");
+        notify.error("That file could not be opened as an image. Please try another file.");
         return null;
       } finally {
         setIsUploading(false);

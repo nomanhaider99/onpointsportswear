@@ -4,31 +4,62 @@ import Link from "next/link";
 import { AlertTriangle, Pencil } from "lucide-react";
 import { linesMissingArtwork, postalLabel, regionLabel, type OrderDraft } from "@/lib/checkout";
 import { formatPrice } from "@/lib/utils";
+import {
+  PaymentMethodPicker,
+  type PaymentChoice,
+} from "@/components/checkout/PaymentMethodPicker";
+import { PaypalCheckoutButtons } from "@/components/checkout/PaypalCheckoutButtons";
 
 /** Read-back of everything being ordered, plus the place-order action. */
 export function CheckoutReview({
   draft,
   submitting,
   error,
+  paymentMethod,
+  enabledMethods,
+  paypalClientId,
+  currency,
+  pendingPaypal,
+  onPaymentMethodChange,
   onBack,
   onPlaceOrder,
+  onPaypalPaid,
+  onPaypalError,
 }: {
   draft: OrderDraft;
   submitting: boolean;
   error: string | null;
+  paymentMethod: PaymentChoice;
+  enabledMethods: PaymentChoice[];
+  paypalClientId: string;
+  currency: string;
+  pendingPaypal: { orderId: string; guestToken?: string } | null;
+  onPaymentMethodChange: (method: PaymentChoice) => void;
   onBack: () => void;
   onPlaceOrder: () => void;
+  onPaypalPaid: () => void;
+  onPaypalError: (message: string) => void;
 }) {
   const { details } = draft;
   const missing = linesMissingArtwork(draft);
 
+  const ctaLabel =
+    paymentMethod === "stripe"
+      ? submitting
+        ? "Redirecting to Stripe…"
+        : "Pay with Stripe"
+      : paymentMethod === "paypal"
+        ? submitting
+          ? "Preparing PayPal…"
+          : pendingPaypal
+            ? "Complete PayPal below"
+            : "Continue with PayPal"
+        : submitting
+          ? "Placing order…"
+          : "Place order (Cash on Delivery)";
+
   return (
     <div>
-      {/*
-        Artwork lives in memory only, so a line added before a page reload keeps
-        its placement but loses the file. Say so plainly rather than letting the
-        customer assume their logo is attached.
-      */}
       {missing.length > 0 && (
         <div
           role="alert"
@@ -39,9 +70,9 @@ export function CheckoutReview({
             <p className="font-semibold text-[#ffb95e]">Your logo file needs re-attaching</p>
             <p className="mt-1 text-white/80">
               Uploaded artwork is not stored between visits, so the file for{" "}
-              {missing.map((line) => line.name).join(", ")} is no longer attached. The
-              placement and sizing are still saved. Re-open the product to re-apply your
-              logo, or place the order and we will email you to collect the artwork.
+              {missing.map((line) => line.name).join(", ")} is no longer attached. The placement
+              and sizing are still saved. Re-open the product to re-apply your logo, or place the
+              order and we will email you to collect the artwork.
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               {missing.map((line) => (
@@ -166,6 +197,23 @@ export function CheckoutReview({
         </ul>
       </section>
 
+      <PaymentMethodPicker
+        value={paymentMethod}
+        onChange={onPaymentMethodChange}
+        enabledMethods={enabledMethods}
+      />
+
+      {pendingPaypal && paypalClientId ? (
+        <PaypalCheckoutButtons
+          orderId={pendingPaypal.orderId}
+          guestToken={pendingPaypal.guestToken}
+          clientId={paypalClientId}
+          currency={currency}
+          onPaid={onPaypalPaid}
+          onError={onPaypalError}
+        />
+      ) : null}
+
       {error && (
         <p
           role="alert"
@@ -176,14 +224,16 @@ export function CheckoutReview({
       )}
 
       <div className="mt-8 flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          onClick={onPlaceOrder}
-          disabled={submitting}
-          className="rounded-lg bg-primary px-8 py-3 text-base text-primary-foreground transition-colors duration-300 hover:bg-[#029b36] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-primary"
-        >
-          {submitting ? "Placing order…" : "Place Order"}
-        </button>
+        {!(paymentMethod === "paypal" && pendingPaypal) ? (
+          <button
+            type="button"
+            onClick={onPlaceOrder}
+            disabled={submitting}
+            className="rounded-lg bg-primary px-8 py-3 text-base text-primary-foreground transition-colors duration-300 hover:bg-[#029b36] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-primary"
+          >
+            {ctaLabel}
+          </button>
+        ) : null}
         <button
           type="button"
           onClick={onBack}
@@ -195,8 +245,11 @@ export function CheckoutReview({
       </div>
 
       <p className="mt-4 text-sm text-white/60">
-        Placing an order sends your request to our team. No payment is taken now — we will
-        confirm pricing, taxes and shipping before anything is charged.
+        {paymentMethod === "cod"
+          ? "Cash on delivery orders are confirmed by our team before shipping."
+          : paymentMethod === "stripe"
+            ? "You will be redirected to Stripe’s secure checkout to pay by card."
+            : "Use the PayPal button to finish payment securely."}
       </p>
     </div>
   );

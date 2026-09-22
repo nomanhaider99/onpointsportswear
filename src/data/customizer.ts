@@ -187,11 +187,31 @@ function resolve(
  * matter what config exists, which is what keeps the Customize button off the
  * page and the customizer bundle out of the download.
  */
+function defaultCustomizerConfig(product: Product): ProductCustomizerConfig {
+  return {
+    enabled: true,
+    baseImage: product.image,
+    baseWidth: 800,
+    baseHeight: 800,
+    printAreas: [
+      { id: "front", name: "Front", x: 248, y: 180, width: 300, height: 340 },
+      { id: "back", name: "Back", x: 248, y: 180, width: 300, height: 340 },
+      { id: "left", name: "Left", x: 128, y: 224, width: 192, height: 240 },
+      { id: "top", name: "Top", x: 272, y: 96, width: 256, height: 160 },
+    ],
+  };
+}
+
 export function getCustomizerConfig(product: Product): ResolvedCustomizerConfig | null {
   if (!product.customizable) return null;
 
-  const config = product.customizer ?? mockCustomizerConfigs[product.id];
-  if (!config || !config.enabled) return null;
+  const config =
+    product.customizer ??
+    mockCustomizerConfigs[product.id] ??
+    mockCustomizerConfigs[product.slug] ??
+    defaultCustomizerConfig(product);
+
+  if (!config.enabled) return null;
 
   return resolve(config, product.image);
 }

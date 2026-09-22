@@ -174,7 +174,10 @@ export function buildOrderDraft(
       printAreaName: item.customization?.printAreaName,
       logoFileName: item.customization?.logoFileName,
       customizationId: id,
-      artworkMissing: Boolean(item.customization) && !full,
+      artworkMissing:
+        Boolean(item.customization) &&
+        !full &&
+        item.customization?.studio !== "jersey",
     };
   });
 
@@ -210,29 +213,16 @@ export function linesMissingArtwork(draft: OrderDraft): OrderLine[] {
  * No payment is taken here; payment integration is explicitly out of scope for
  * the frontend and belongs with the order API.
  */
-export async function submitOrder(draft: OrderDraft): Promise<{ reference: string }> {
-  const endpoint = process.env.NEXT_PUBLIC_ORDER_ENDPOINT;
-
-  if (process.env.NODE_ENV === "development") {
-    // Makes the payload shape easy to inspect while the backend is being built.
-    console.info("[checkout] submitOrder", draft);
+export async function submitOrder(
+  draft: OrderDraft,
+  paymentMethod: "stripe" | "paypal" | "cod" = "cod",
+): Promise<{ reference: string; orderId: string; guestToken: string }> {
+  const { store } = await import("@/store/store");
+  const { placeOrder } = await import("@/store/features/orders/ordersSlice");
+  const items = store.getState().cart.items;
+  const result = await store.dispatch(placeOrder({ draft, items, paymentMethod }));
+  if (placeOrder.rejected.match(result)) {
+    throw new Error(String(result.payload || "Order submission failed"));
   }
-
-  if (!endpoint) {
-    // Nothing configured: resolve so the UI can show its confirmation state.
-    await new Promise((resolve) => setTimeout(resolve, 700));
-    return { reference: draft.reference };
-  }
-
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(draft),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Order submission failed with status ${response.status}`);
-  }
-
-  return { reference: draft.reference };
+  return result.payload;
 }

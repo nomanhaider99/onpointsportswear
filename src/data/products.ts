@@ -28,6 +28,11 @@ export interface Product {
    * `false` means standard: no Customize button, ever, whatever config exists.
    */
   customizable: boolean;
+  originalPrice?: number;
+  description?: string;
+  colors?: string[];
+  stock?: number;
+  images?: string[];
   /**
    * Per-product customizer config. Optional so records stay valid without it.
    * When the backend starts returning this it takes priority over the mock

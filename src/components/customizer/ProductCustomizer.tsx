@@ -7,6 +7,7 @@ import { X } from "lucide-react";
 import type { ResolvedCustomizerConfig } from "@/data/customizer";
 import type { Product } from "@/data/products";
 import { useProductCustomizer } from "@/hooks/useProductCustomizer";
+import { notify } from "@/lib/notify";
 import type { ProductCustomization } from "@/lib/customization";
 import { CustomizerToolbar, MIN_ZOOM } from "@/components/customizer/CustomizerToolbar";
 import { LogoControls } from "@/components/customizer/LogoControls";
@@ -178,6 +179,7 @@ export function ProductCustomizer({
       link.click();
     } catch {
       setExportError("The preview could not be exported in this browser.");
+      notify.error("The preview could not be exported in this browser.");
     } finally {
       transformers.forEach((transformer, index) => transformer.nodes(attached[index]));
       stage.draw();
@@ -189,9 +191,11 @@ export function ProductCustomizer({
     const customization = customizer.serialize();
     if (!customization) {
       setError("Upload a logo before applying your customization.");
+      notify.error("Upload a logo before applying your customization.");
       return;
     }
     onApply(customization);
+    notify.success("Customization applied");
   }, [customizer, onApply, setError]);
 
   // Single-area products skip the placement step, so the rail numbers itself.

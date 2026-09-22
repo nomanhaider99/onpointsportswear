@@ -11,3 +11,5 @@ next-env.d.ts
 md-file/
 .claude/
 package-lock.json
+AGENTS.md
+CLAUDE.md

@@ -13,18 +13,18 @@ import {
   type CheckoutErrors,
   type OrderDraft,
 } from "@/lib/checkout";
+import { paymentsApi, type PaymentMethodId } from "@/lib/api/client";
 import { CheckoutConfirmation } from "@/components/checkout/CheckoutConfirmation";
 import { CheckoutDetailsForm } from "@/components/checkout/CheckoutDetailsForm";
 import { CheckoutReview } from "@/components/checkout/CheckoutReview";
 import { CheckoutSteps, type CheckoutStep } from "@/components/checkout/CheckoutSteps";
 import { OrderSummary } from "@/components/checkout/OrderSummary";
+import type { PaymentChoice } from "@/components/checkout/PaymentMethodPicker";
+import { notify } from "@/lib/notify";
 
 /**
  * Checkout controller: details -> review -> confirmation.
- *
- * Steps are local state rather than routes, so a half-filled form is never lost
- * to a navigation. The placed order is held after the cart is cleared so the
- * confirmation can still render.
+ * Review includes Stripe / PayPal / COD payment choice.
  */
 export function CheckoutFlow() {
   const { items, subtotal, kind, clearCart } = useCart();
@@ -36,16 +36,36 @@ export function CheckoutFlow() {
   const [placed, setPlaced] = useState<OrderDraft | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentChoice>("stripe");
+  const [enabledMethods, setEnabledMethods] = useState<PaymentChoice[]>(["cod"]);
+  const [paypalClientId, setPaypalClientId] = useState("");
+  const [currency, setCurrency] = useState("USD");
+  const [pendingPaypal, setPendingPaypal] = useState<{
+    orderId: string;
+    guestToken?: string;
+  } | null>(null);
   const headingRef = useRef<HTMLDivElement>(null);
   const isFirstStep = useRef(true);
 
-  /*
-   * Moving between steps replaces the whole panel, so focus is sent to the top
-   * of it - otherwise a keyboard or screen-reader user is left where the old
-   * step's controls used to be. An effect rather than requestAnimationFrame,
-   * which does not fire while the tab is hidden. Skipped on mount so landing on
-   * the page does not steal focus.
-   */
+  useEffect(() => {
+    paymentsApi
+      .config()
+      .then((config) => {
+        const methods = (config.methods || []).filter(Boolean) as PaymentChoice[];
+        setEnabledMethods(methods.length ? methods : ["cod"]);
+        setPaypalClientId(config.paypalClientId || "");
+        setCurrency(config.currency || "USD");
+        const preferred = (["stripe", "paypal", "cod"] as PaymentMethodId[]).find((id) =>
+          methods.includes(id as PaymentChoice),
+        );
+        if (preferred) setPaymentMethod(preferred as PaymentChoice);
+      })
+      .catch(() => {
+        setEnabledMethods(["cod"]);
+        setPaymentMethod("cod");
+      });
+  }, []);
+
   useEffect(() => {
     if (isFirstStep.current) {
       isFirstStep.current = false;
@@ -67,14 +87,30 @@ export function CheckoutFlow() {
     [],
   );
 
+  const finishPlaced = useCallback(
+    (nextDraft: OrderDraft) => {
+      setPlaced(nextDraft);
+      clearCart({ silent: true });
+      setPendingPaypal(null);
+      setStep("confirmation");
+    },
+    [clearCart],
+  );
+
   const onDetailsSubmit = useCallback(
     (event: React.FormEvent<HTMLFormElement>) => {
       event.preventDefault();
       const nextErrors = validateCheckoutDetails(values);
       setErrors(nextErrors);
-      if (Object.keys(nextErrors).length > 0) return;
+      if (Object.keys(nextErrors).length > 0) {
+        const first = Object.values(nextErrors)[0];
+        if (first) notify.error(first);
+        return;
+      }
 
       setDraft(buildOrderDraft(items, values, kind, createOrderReference()));
+      setPendingPaypal(null);
+      setSubmitError(null);
       setStep("review");
     },
     [values, items, kind],
@@ -85,25 +121,49 @@ export function CheckoutFlow() {
     setSubmitting(true);
     setSubmitError(null);
     try {
-      await submitOrder(draft);
-      setPlaced(draft);
-      clearCart();
-      setStep("confirmation");
-    } catch {
+      const result = await submitOrder(draft, paymentMethod);
+
+      if (paymentMethod === "cod") {
+        finishPlaced({ ...draft, reference: result.reference });
+        return;
+      }
+
+      if (paymentMethod === "stripe") {
+        const origin = window.location.origin;
+        const session = await paymentsApi.stripeCheckoutSession({
+          orderId: result.orderId,
+          guestToken: result.guestToken,
+          successUrl: `${origin}/checkout/success?orderId={ORDER_ID}&guest=${encodeURIComponent(result.guestToken || "")}`,
+          cancelUrl: `${origin}/checkout?cancelled=1&orderId={ORDER_ID}`,
+        });
+        if (!session.url) throw new Error("Stripe checkout URL missing");
+        clearCart({ silent: true });
+        window.location.href = session.url;
+        return;
+      }
+
+      if (paymentMethod === "paypal") {
+        setPendingPaypal({ orderId: result.orderId, guestToken: result.guestToken });
+        notify.success("Order created — complete PayPal payment below.");
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "";
       setSubmitError(
-        "We could not place your order just now. Please try again, or call us and quote your items.",
+        message && !/failed to fetch|network/i.test(message)
+          ? message
+          : "We could not place your order just now. Please try again, or call us and quote your items.",
       );
     } finally {
       setSubmitting(false);
     }
-  }, [draft, clearCart]);
+  }, [draft, paymentMethod, finishPlaced, clearCart]);
 
   const goBackToDetails = useCallback(() => {
     setStep("details");
     setSubmitError(null);
+    setPendingPaypal(null);
   }, []);
 
-  // Empty cart, and no order just placed: nothing to check out.
   if (items.length === 0 && step !== "confirmation") {
     return (
       <div className="rounded-xl border border-border bg-card p-10 text-center">
@@ -151,8 +211,23 @@ export function CheckoutFlow() {
                 draft={draft}
                 submitting={submitting}
                 error={submitError}
+                paymentMethod={paymentMethod}
+                enabledMethods={enabledMethods}
+                paypalClientId={paypalClientId}
+                currency={currency}
+                pendingPaypal={pendingPaypal}
+                onPaymentMethodChange={(method) => {
+                  setPaymentMethod(method);
+                  setPendingPaypal(null);
+                  setSubmitError(null);
+                }}
                 onBack={goBackToDetails}
                 onPlaceOrder={onPlaceOrder}
+                onPaypalPaid={() => {
+                  if (!draft) return;
+                  finishPlaced(draft);
+                }}
+                onPaypalError={(message) => setSubmitError(message)}
               />
             )
           )}

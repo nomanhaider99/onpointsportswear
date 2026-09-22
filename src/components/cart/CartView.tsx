@@ -3,12 +3,20 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Minus, Plus, Trash2 } from "lucide-react";
-import { useCart } from "@/lib/cart";
+import { cartItemCompareAt, useCart } from "@/lib/cart";
 import { formatPrice } from "@/lib/utils";
+import { useAppSelector } from "@/store/hooks";
 
 export function CartView() {
   const { items, subtotal, removeItem, incrementItem, decrementItem, updateQuantity, clearCart } =
     useCart();
+  const catalog = useAppSelector((state) => state.catalog.products);
+  const originalTotal = items.reduce((sum, item) => {
+    const listed = catalog.find((product) => product.slug === item.slug)?.originalPrice;
+    const compare = cartItemCompareAt(item, listed);
+    return sum + (compare || item.price) * item.quantity;
+  }, 0);
+  const discount = Math.max(0, originalTotal - subtotal);
 
   if (items.length === 0) {
     return (
@@ -57,7 +65,22 @@ export function CartView() {
                     {item.customization.printAreaName}
                   </p>
                 )}
-                <p className="mt-1 text-sm text-white/70">{formatPrice(item.price)} each</p>
+                <p className="mt-1 text-sm text-white/70">
+                  {(() => {
+                    const compare = cartItemCompareAt(
+                      item,
+                      catalog.find((product) => product.slug === item.slug)?.originalPrice,
+                    );
+                    return compare > 0 ? (
+                      <>
+                        <span className="mr-2 text-white/45 line-through">{formatPrice(compare)}</span>
+                        {formatPrice(item.price)} each
+                      </>
+                    ) : (
+                      <>{formatPrice(item.price)} each</>
+                    );
+                  })()}
+                </p>
               </div>
 
               <div className="flex items-center gap-4">
@@ -92,7 +115,22 @@ export function CartView() {
                 </div>
 
                 <p className="min-w-20 text-right text-lg font-semibold text-primary">
-                  {formatPrice(item.price * item.quantity)}
+                  {(() => {
+                    const compare = cartItemCompareAt(
+                      item,
+                      catalog.find((product) => product.slug === item.slug)?.originalPrice,
+                    );
+                    return (
+                      <>
+                        {compare > 0 ? (
+                          <span className="mb-0.5 block text-sm font-normal text-white/45 line-through">
+                            {formatPrice(compare * item.quantity)}
+                          </span>
+                        ) : null}
+                        {formatPrice(item.price * item.quantity)}
+                      </>
+                    );
+                  })()}
                 </p>
 
                 <button
@@ -110,7 +148,7 @@ export function CartView() {
 
         <button
           type="button"
-          onClick={clearCart}
+          onClick={() => clearCart()}
           className="mt-5 rounded-lg border border-primary px-5 py-2.5 text-base text-white transition-colors duration-300 hover:bg-primary hover:text-primary-foreground"
         >
           Clear Cart
@@ -126,6 +164,18 @@ export function CartView() {
               {items.reduce((total, item) => total + item.quantity, 0)}
             </dd>
           </div>
+          {discount > 0 ? (
+            <>
+              <div className="flex items-center justify-between">
+                <dt className="text-white/70">Original</dt>
+                <dd className="text-white/60 line-through">{formatPrice(originalTotal)}</dd>
+              </div>
+              <div className="flex items-center justify-between">
+                <dt className="text-white/70">Discount</dt>
+                <dd className="font-semibold text-primary">-{formatPrice(discount)}</dd>
+              </div>
+            </>
+          ) : null}
           <div className="flex items-center justify-between border-t border-border pt-3">
             <dt className="text-white/70">Subtotal</dt>
             <dd className="text-lg font-semibold text-primary" aria-live="polite">

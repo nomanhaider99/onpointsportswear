@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { siteConfig } from "@/data/site";
 import { submitContactForm, type ContactFormValues } from "@/lib/contact";
+import { notify } from "@/lib/notify";
 
 type Status = "idle" | "submitting" | "success" | "error";
 
@@ -54,6 +55,8 @@ export function ContactForm() {
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) {
       setStatus("idle");
+      const first = Object.values(nextErrors)[0];
+      if (first) notify.error(first);
       return;
     }
 

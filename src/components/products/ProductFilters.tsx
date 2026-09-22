@@ -1,8 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
-  products,
   productCategories,
   productTypes,
   productTypeLabels,
@@ -11,21 +10,32 @@ import {
 } from "@/data/products";
 import { ProductGrid } from "./ProductGrid";
 import { cn } from "@/lib/utils";
+import { fetchShopCatalog } from "@/store/features/catalog/catalogSlice";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
 type CategoryFilter = "All" | ProductCategory;
 type TypeFilter = "All" | ProductType;
-
-/**
- * Two independent filters: what the garment is, and whether it can carry a
- * custom logo. They combine, so "Jerseys + Customizable" is a valid view.
- */
 
 const tabClass =
   "rounded-md border border-primary px-[15px] pb-[15px] pt-2.5 font-[family-name:var(--font-inter)] text-sm font-bold uppercase transition-colors duration-300";
 
 export function ProductFilters() {
+  const dispatch = useAppDispatch();
+  const products = useAppSelector((state) => state.catalog.products);
+  const categories = useAppSelector((state) => state.catalog.categories);
+  const loading = useAppSelector((state) => state.catalog.loading);
   const [category, setCategory] = useState<CategoryFilter>("All");
   const [type, setType] = useState<TypeFilter>("All");
+
+  useEffect(() => {
+    dispatch(fetchShopCatalog());
+  }, [dispatch]);
+
+  const categoryTabs = useMemo(() => {
+    const names = categories.map((item) => item.name).filter(Boolean);
+    const merged = Array.from(new Set(["All", ...productCategories.filter((item) => item !== "All"), ...names]));
+    return merged as CategoryFilter[];
+  }, [categories]);
 
   const visible = useMemo(
     () =>
@@ -35,7 +45,7 @@ export function ProductFilters() {
         if (type === "standard") return !product.customizable;
         return true;
       }),
-    [category, type],
+    [products, category, type],
   );
 
   return (
@@ -45,7 +55,7 @@ export function ProductFilters() {
         role="tablist"
         aria-label="Product categories"
       >
-        {productCategories.map((entry) => {
+        {categoryTabs.map((entry) => {
           const selected = entry === category;
           return (
             <button
@@ -100,7 +110,9 @@ export function ProductFilters() {
       </div>
 
       <p className="mt-4 text-sm text-white/60" aria-live="polite">
-        {visible.length} {visible.length === 1 ? "product" : "products"}
+        {loading && products.length === 0
+          ? "Loading products…"
+          : `${visible.length} ${visible.length === 1 ? "product" : "products"}`}
         {type === "customizable" && " you can add your own logo to"}
         {type === "standard" && " sold as shown"}
       </p>
@@ -115,7 +127,7 @@ export function ProductFilters() {
           <ProductGrid products={visible} columns={2} />
         ) : (
           <p className="rounded-xl border border-border bg-card p-10 text-center text-base text-white">
-            No products match those filters.
+            {loading ? "Loading products…" : "No products match those filters."}
           </p>
         )}
       </div>
