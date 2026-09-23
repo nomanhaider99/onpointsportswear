@@ -1,13 +1,17 @@
 import type { Product } from "@/data/products";
+import { JERSEY_STUDIO_URL } from "@/lib/config";
 
-/**
- * Every customizable shop product opens the hockey/jersey Vite studio
- * (embedded at /customize/jersey) instead of the logo-only dialog.
- */
+const STUDIO_BASE = (JERSEY_STUDIO_URL || "https://customizer.betterbuildsc.com").replace(
+  /\/$/,
+  "",
+);
+
+/** Only products with type `customizable` (mapped to `product.customizable`). */
 export function usesJerseyStudio(product: Product): boolean {
   return Boolean(product.customizable);
 }
 
+/** Opens the hosted Vite customizer with product context in the query string. */
 export function jerseyStudioHref(product: Product, size?: string): string {
   const params = new URLSearchParams({
     productId: product.id,
@@ -20,5 +24,5 @@ export function jerseyStudioHref(product: Product, size?: string): string {
     params.set("size", variation.label);
     params.set("price", String(variation.price));
   }
-  return `/customize/jersey?${params.toString()}`;
+  return `${STUDIO_BASE}/?${params.toString()}`;
 }

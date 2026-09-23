@@ -19,6 +19,11 @@ const nextConfig: NextConfig = {
         hostname: "plus.unsplash.com",
       },
       {
+        protocol: "https",
+        hostname: "backend.betterbuildsc.com",
+        pathname: "/**",
+      },
+      {
         protocol: "http",
         hostname: "localhost",
         port: "5000",
