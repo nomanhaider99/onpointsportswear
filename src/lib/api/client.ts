@@ -19,7 +19,12 @@ export class ApiError extends Error {
   status: number;
   constructor(message: string, status: number) {
     super(message);
-    this.name = "ApiError";
+    // Error.name is getter-only in some runtimes — never assign directly.
+    Object.defineProperty(this, "name", {
+      value: "ApiError",
+      configurable: true,
+      writable: true,
+    });
     this.status = status;
   }
 }
