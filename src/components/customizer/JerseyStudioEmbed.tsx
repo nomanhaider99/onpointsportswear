@@ -92,7 +92,8 @@ export function JerseyStudioEmbed() {
                   transform: line.customization?.transform || {
                     x: 0,
                     y: 0,
-                    scale: 1,
+                    width: 1,
+                    height: 1,
                     rotation: 0,
                   },
                   ...(line.customization || {}),
@@ -113,7 +114,8 @@ export function JerseyStudioEmbed() {
                 transform: line.customization?.transform || {
                   x: 0,
                   y: 0,
-                  scale: 1,
+                  width: 1,
+                  height: 1,
                   rotation: 0,
                 },
                 ...(line.customization || {}),
