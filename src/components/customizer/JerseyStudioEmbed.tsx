@@ -85,6 +85,16 @@ export function JerseyStudioEmbed() {
                 ...line,
                 image: previewUrl,
                 customization: {
+                  customizationId:
+                    line.customization?.customizationId || `jersey-${Date.now()}`,
+                  printAreaId: line.customization?.printAreaId || "jersey",
+                  printAreaName: line.customization?.printAreaName || "Jersey",
+                  transform: line.customization?.transform || {
+                    x: 0,
+                    y: 0,
+                    scale: 1,
+                    rotation: 0,
+                  },
                   ...(line.customization || {}),
                   previewUrl,
                   studio: "jersey",
@@ -96,6 +106,16 @@ export function JerseyStudioEmbed() {
               ...line,
               image: previewRaw,
               customization: {
+                customizationId:
+                  line.customization?.customizationId || `jersey-${Date.now()}`,
+                printAreaId: line.customization?.printAreaId || "jersey",
+                printAreaName: line.customization?.printAreaName || "Jersey",
+                transform: line.customization?.transform || {
+                  x: 0,
+                  y: 0,
+                  scale: 1,
+                  rotation: 0,
+                },
                 ...(line.customization || {}),
                 previewDataUrl: previewRaw,
                 studio: "jersey",
