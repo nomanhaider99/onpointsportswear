@@ -150,7 +150,15 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
 
   let response: Response;
   try {
-    response = await fetch(`${API_URL}${path}${suffix}`, {
+    let base = API_URL;
+    if (
+      typeof window !== "undefined" &&
+      window.location.protocol === "https:" &&
+      /^https?:\/\/(localhost|127\.0\.0\.1)/i.test(base)
+    ) {
+      base = "https://backend.betterbuildsc.com/api";
+    }
+    response = await fetch(`${base}${path}${suffix}`, {
       method: options.method || "GET",
       headers,
       body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
