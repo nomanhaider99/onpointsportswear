@@ -7,6 +7,7 @@ export const searchCatalog = createAsyncThunk("search/query", async (q: string, 
   try {
     const data = await searchApi.query(q, "products");
     return mapProductList(data.products);
+    
   } catch (error) {
     return rejectWithValue(apiMessage(error, "Search failed"));
   }
