@@ -13,3 +13,5 @@ md-file/
 package-lock.json
 AGENTS.md
 CLAUDE.md
+
+.vercel
