@@ -1,8 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { Minus, Plus, Trash2 } from "lucide-react";
+import { CartItemThumb } from "@/components/cart/CartItemThumb";
 import { cartItemCompareAt, useCart } from "@/lib/cart";
 import { formatPrice } from "@/lib/utils";
 import { useAppSelector } from "@/store/hooks";
@@ -48,34 +48,13 @@ export function CartView() {
                 href={`/products/${item.slug}`}
                 className="relative h-28 w-full shrink-0 overflow-hidden rounded-lg bg-white/5 sm:h-24 sm:w-24"
               >
-                {(() => {
-                  const src =
-                    item.image ||
-                    item.customization?.previewDataUrl ||
-                    item.catalogImage ||
-                    "/images/logo.png";
-                  const isData = src.startsWith("data:");
-                  if (isData || !src.startsWith("http")) {
-                    return (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={src}
-                        alt={item.name}
-                        className="absolute inset-0 h-full w-full object-cover"
-                      />
-                    );
+                <CartItemThumb
+                  item={item}
+                  catalogImage={
+                    catalog.find((product) => product.slug === item.slug)?.image
                   }
-                  return (
-                    <Image
-                      src={src}
-                      alt={item.name}
-                      fill
-                      sizes="120px"
-                      className="object-cover"
-                      unoptimized
-                    />
-                  );
-                })()}
+                  sizes="120px"
+                />
               </Link>
 
               <div className="min-w-0 flex-1">

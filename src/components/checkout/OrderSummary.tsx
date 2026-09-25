@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import Image from "next/image";
 import Link from "next/link";
+import { CartItemThumb } from "@/components/cart/CartItemThumb";
 import { cartItemCompareAt, type CartItem } from "@/lib/cart";
 import { formatPrice } from "@/lib/utils";
 import { fetchShopCatalog } from "@/store/features/catalog/catalogSlice";
@@ -57,8 +57,15 @@ export function OrderSummary({
           return (
             <li key={item.key} className="flex gap-3">
               <span className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-white/5">
-                <Image src={item.image} alt="" fill sizes="64px" className="object-cover" />
-                <span className="absolute right-0 top-0 min-w-5 rounded-bl-md bg-primary px-1 text-center text-xs font-bold text-primary-foreground">
+                <CartItemThumb
+                  item={item}
+                  catalogImage={
+                    catalog.find((product) => product.slug === item.slug)?.image ||
+                    bySlug[item.slug]?.image
+                  }
+                  sizes="64px"
+                />
+                <span className="absolute right-0 top-0 z-10 min-w-5 rounded-bl-md bg-primary px-1 text-center text-xs font-bold text-primary-foreground">
                   {item.quantity}
                 </span>
               </span>
