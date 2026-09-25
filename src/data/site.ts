@@ -24,7 +24,7 @@ export const siteConfig = {
   phone: "647-805-5730",
   phoneHref: "tel:+16478055730",
   credit: {
-    label: "Design & Developed By Premium Web Agency.",
+    label: "Design & Developed By Premium Web Agency.", 
     href: "https://premiumwebagency.com/",
   },
   footerBlurb: [
