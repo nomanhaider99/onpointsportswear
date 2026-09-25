@@ -52,14 +52,24 @@ export function JerseyStudioEmbed() {
 
   const iframeSrc = useMemo(() => {
     if (!STUDIO_ORIGIN) return "";
-    const qs = searchParams.toString();
-    return qs ? `${STUDIO_ORIGIN}/?${qs}` : `${STUDIO_ORIGIN}/`;
+    const params = new URLSearchParams(searchParams.toString());
+    if (!params.has("embed")) params.set("embed", "web");
+    const token = getStoredToken();
+    if (token && !params.has("token")) params.set("token", token);
+    const qs = params.toString();
+    return qs ? `${STUDIO_ORIGIN}/?${qs}` : `${STUDIO_ORIGIN}/?embed=web`;
   }, [searchParams]);
 
   useEffect(() => {
     async function onMessage(event: MessageEvent) {
-      const data = event.data as StudioMessage;
+      const data = event.data as StudioMessage & { source?: string; reason?: string };
       if (!data || typeof data !== "object" || !data.type) return;
+
+      if (data.type === "op-jersey-request-login") {
+        notify.error("Sign in to save designs to your account");
+        router.push(`/account?login=1&returnTo=${encodeURIComponent("/customize/jersey")}`);
+        return;
+      }
 
       if (data.type === "op-jersey-save-design") {
         try {
@@ -102,7 +112,7 @@ export function JerseyStudioEmbed() {
                 },
               };
             }
-          } else if (previewRaw) {
+          } else if (previewRaw && !previewRaw.startsWith("data:")) {
             line = {
               ...line,
               image: previewRaw,
@@ -119,14 +129,35 @@ export function JerseyStudioEmbed() {
                   rotation: 0,
                 },
                 ...(line.customization || {}),
-                previewDataUrl: previewRaw,
+                previewUrl: previewRaw,
                 studio: "jersey",
               },
             };
+          } else if (previewRaw.startsWith("data:")) {
+            try {
+              const uploaded = await uploadCustomPreview(previewRaw);
+              if (uploaded) {
+                line = {
+                  ...line,
+                  image: uploaded,
+                  customization: {
+                    ...(line.customization || {
+                      customizationId: `jersey-${Date.now()}`,
+                      printAreaId: "jersey",
+                      printAreaName: "Jersey",
+                      transform: { x: 0, y: 0, width: 1, height: 1, rotation: 0 },
+                    }),
+                    previewUrl: uploaded,
+                    studio: "jersey",
+                  },
+                };
+              }
+            } catch {
+              /* guest cart without preview */
+            }
           }
         } catch {
-          /* cart still proceeds with local preview */
-          if (previewRaw) {
+          if (previewRaw && previewRaw.startsWith("http")) {
             line = { ...line, image: previewRaw };
           }
         }
