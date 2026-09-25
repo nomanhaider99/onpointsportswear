@@ -60,7 +60,8 @@ export function CheckoutFlow() {
         );
         if (preferred) setPaymentMethod(preferred as PaymentChoice);
       })
-      .catch(() => {
+      .catch((err) => {
+        console.warn("[checkout] payments/config failed — showing COD only", err);
         setEnabledMethods(["cod"]);
         setPaymentMethod("cod");
       });

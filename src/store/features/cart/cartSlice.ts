@@ -138,7 +138,12 @@ const cartSlice = createSlice({
       } else {
         state.items.push({
           ...incoming,
-          image: mediaUrl(incoming.image) || incoming.image,
+          image:
+            mediaUrl(incoming.image) ||
+            incoming.image ||
+            mediaUrl(incoming.catalogImage) ||
+            incoming.catalogImage ||
+            "",
           customizable: true,
         });
       }

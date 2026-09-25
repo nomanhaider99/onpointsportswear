@@ -5,15 +5,23 @@ function isLoopback(url: string) {
   return /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/i.test(url);
 }
 
+function isPublicShopHost() {
+  if (typeof window === "undefined") return false;
+  const host = window.location.hostname.toLowerCase();
+  return (
+    host.includes("onpointsportswear") ||
+    host.includes("vercel.app") ||
+    host.includes("betterbuildsc.com")
+  );
+}
+
 /**
- * Production builds always use the public backend.
- * Vercel env sometimes still has 127.0.0.1 baked in — never ship that.
- * Local `next dev` keeps NEXT_PUBLIC_API_URL / localhost.
+ * Production / live shop always use the public backend.
+ * Vercel env sometimes still has 127.0.0.1 baked in — never call loopback from HTTPS.
  */
 function resolveApiUrl() {
-  if (process.env.NODE_ENV === "production") {
-    return PROD_API;
-  }
+  if (isPublicShopHost()) return PROD_API;
+  if (process.env.NODE_ENV === "production") return PROD_API;
 
   const raw = String(process.env.NEXT_PUBLIC_API_URL || "")
     .trim()
@@ -37,4 +45,4 @@ export const JERSEY_STUDIO_URL = String(
   .trim()
   .replace(/\/$/, "");
 
-export { API_URL };
+export { API_URL, PROD_API };

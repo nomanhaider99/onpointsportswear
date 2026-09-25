@@ -22,6 +22,8 @@ export interface CartItem {
   size: string;
   price: number;
   image: string;
+  /** Catalog product thumb — used when jersey preview upload is unavailable. */
+  catalogImage?: string;
   quantity: number;
   productId?: string;
   originalPrice?: number;

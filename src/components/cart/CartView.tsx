@@ -46,9 +46,36 @@ export function CartView() {
             >
               <Link
                 href={`/products/${item.slug}`}
-                className="relative h-28 w-full shrink-0 overflow-hidden rounded-lg sm:h-24 sm:w-24"
+                className="relative h-28 w-full shrink-0 overflow-hidden rounded-lg bg-white/5 sm:h-24 sm:w-24"
               >
-                <Image src={item.image} alt={item.name} fill sizes="120px" className="object-cover" />
+                {(() => {
+                  const src =
+                    item.image ||
+                    item.customization?.previewDataUrl ||
+                    item.catalogImage ||
+                    "/images/logo.png";
+                  const isData = src.startsWith("data:");
+                  if (isData || !src.startsWith("http")) {
+                    return (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={src}
+                        alt={item.name}
+                        className="absolute inset-0 h-full w-full object-cover"
+                      />
+                    );
+                  }
+                  return (
+                    <Image
+                      src={src}
+                      alt={item.name}
+                      fill
+                      sizes="120px"
+                      className="object-cover"
+                      unoptimized
+                    />
+                  );
+                })()}
               </Link>
 
               <div className="min-w-0 flex-1">
