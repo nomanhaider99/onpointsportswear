@@ -9,15 +9,37 @@ import { markJerseyStudioCartForClear } from "@/lib/jersey-cart-clear";
 import { clearCart } from "@/store/features/cart/cartSlice";
 import { useAppDispatch } from "@/store/hooks";
 
+function bounceToApp(appReturn: string, orderId: string, paid: boolean) {
+  if (!appReturn || typeof window === "undefined") return false;
+  try {
+    const url = new URL(appReturn);
+    url.searchParams.set("orderId", orderId);
+    url.searchParams.set("paid", paid ? "1" : "0");
+    window.location.href = url.toString();
+    return true;
+  } catch {
+    try {
+      const join = appReturn.includes("?") ? "&" : "?";
+      window.location.href = `${appReturn}${join}orderId=${encodeURIComponent(orderId)}&paid=${paid ? "1" : "0"}`;
+      return true;
+    } catch {
+      return false;
+    }
+  }
+}
+
 export default function CheckoutSuccessInner() {
   const params = useSearchParams();
   const dispatch = useAppDispatch();
   const orderId = params.get("orderId") || "";
   const guest = params.get("guest") || "";
+  const appReturn = params.get("appReturn") || "";
+  const fromApp = params.get("source") === "app" || Boolean(appReturn);
   const [paid, setPaid] = useState(false);
   const [trackingId, setTrackingId] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [bounced, setBounced] = useState(false);
 
   useEffect(() => {
     if (!orderId) {
@@ -46,6 +68,10 @@ export default function CheckoutSuccessInner() {
           setLoading(false);
           dispatch(clearCart());
           markJerseyStudioCartForClear();
+          if (fromApp && appReturn && !bounced) {
+            setBounced(true);
+            bounceToApp(appReturn, orderId, true);
+          }
           return;
         }
         attempts += 1;
@@ -56,11 +82,19 @@ export default function CheckoutSuccessInner() {
           setError(
             "Payment is still processing. If you were charged, your order will update shortly.",
           );
+          if (fromApp && appReturn && !bounced) {
+            setBounced(true);
+            bounceToApp(appReturn, orderId, false);
+          }
         }
       } catch (err) {
         if (cancelled) return;
         setLoading(false);
         setError(err instanceof Error ? err.message : "Could not verify payment.");
+        if (fromApp && appReturn && !bounced) {
+          setBounced(true);
+          bounceToApp(appReturn, orderId, false);
+        }
       }
     };
 
@@ -68,14 +102,14 @@ export default function CheckoutSuccessInner() {
     return () => {
       cancelled = true;
     };
-  }, [orderId, guest, dispatch]);
+  }, [orderId, guest, dispatch, fromApp, appReturn, bounced]);
 
   return (
     <main className="mx-auto max-w-xl px-4 py-16 text-center">
       {loading ? (
         <div className="flex flex-col items-center gap-3 text-white">
           <Loader2 className="h-10 w-10 animate-spin text-primary" />
-          <p>Confirming your payment…</p>
+          <p>{fromApp ? "Confirming payment and returning to the app…" : "Confirming your payment…"}</p>
         </div>
       ) : paid ? (
         <div className="rounded-xl border border-border bg-card p-8">
@@ -84,20 +118,43 @@ export default function CheckoutSuccessInner() {
           <p className="mt-2 text-white/70">
             Thanks — your order {trackingId || orderId} is paid and being processed.
           </p>
-          <Link
-            href="/products"
-            className="mt-6 inline-flex rounded-lg bg-primary px-6 py-3 text-primary-foreground"
-          >
-            Continue shopping
-          </Link>
+          {fromApp && appReturn ? (
+            <a
+              href="#"
+              onClick={(event) => {
+                event.preventDefault();
+                bounceToApp(appReturn, orderId, true);
+              }}
+              className="mt-6 inline-flex rounded-lg bg-primary px-6 py-3 text-primary-foreground"
+            >
+              Back to app
+            </a>
+          ) : (
+            <Link
+              href="/products"
+              className="mt-6 inline-flex rounded-lg bg-primary px-6 py-3 text-primary-foreground"
+            >
+              Continue shopping
+            </Link>
+          )}
         </div>
       ) : (
         <div className="rounded-xl border border-[#ff6b6b]/40 bg-[#ff6b6b]/10 p-8 text-left">
           <h1 className="text-xl font-bold text-white">Payment status</h1>
           <p className="mt-2 text-white/80">{error || "Payment not confirmed yet."}</p>
-          <Link href="/checkout" className="mt-4 inline-block text-primary underline">
-            Back to checkout
-          </Link>
+          {fromApp && appReturn ? (
+            <button
+              type="button"
+              className="mt-4 text-primary underline"
+              onClick={() => bounceToApp(appReturn, orderId, false)}
+            >
+              Return to app
+            </button>
+          ) : (
+            <Link href="/checkout" className="mt-4 inline-block text-primary underline">
+              Back to checkout
+            </Link>
+          )}
         </div>
       )}
     </main>
