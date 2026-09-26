@@ -1,50 +1,65 @@
 /**
  * Bounce the in-app browser back into the native app so
- * WebBrowser.openAuthSessionAsync can complete.
+ * WebBrowser.openAuthSessionAsync can complete and the tab closes.
  */
-export function bounceToApp(appReturn: string, extras: { orderId?: string; paid?: boolean } = {}) {
-  if (!appReturn || typeof window === "undefined") return false;
+export const DEFAULT_APP_RETURN = "onpoint://payment-return";
 
+export function bounceToApp(appReturn: string, extras: { orderId?: string; paid?: boolean } = {}) {
+  if (typeof window === "undefined") return false;
+
+  const raw = String(appReturn || DEFAULT_APP_RETURN).trim() || DEFAULT_APP_RETURN;
   const orderId = extras.orderId || "";
   const paid = extras.paid ? "1" : "0";
 
-  const withParams = (raw: string) => {
+  const withParams = (value: string) => {
     try {
-      const url = new URL(raw);
+      const url = new URL(value);
       if (orderId) url.searchParams.set("orderId", orderId);
       url.searchParams.set("paid", paid);
       return url.toString();
     } catch {
-      const join = raw.includes("?") ? "&" : "?";
+      const join = value.includes("?") ? "&" : "?";
       const bits = [`paid=${paid}`];
       if (orderId) bits.unshift(`orderId=${encodeURIComponent(orderId)}`);
-      return `${raw}${join}${bits.join("&")}`;
+      return `${value}${join}${bits.join("&")}`;
     }
   };
 
-  const target = withParams(appReturn);
+  const target = withParams(raw);
 
+  // Multiple strategies — Custom Tabs / SFSafariViewController need a real navigation.
   try {
     window.location.replace(target);
   } catch {
     try {
       window.location.href = target;
     } catch {
-      return false;
+      /* continue fallbacks */
     }
   }
 
-  // Android Chrome sometimes needs an intent:// fallback a moment later.
+  try {
+    const anchor = document.createElement("a");
+    anchor.href = target;
+    anchor.rel = "noopener";
+    anchor.style.display = "none";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+  } catch {
+    /* ignore */
+  }
+
+  // Android Chrome Custom Tabs: explicit intent
   if (/^onpoint:/i.test(target)) {
     window.setTimeout(() => {
       try {
         const path = target.replace(/^onpoint:\/\//i, "");
-        const intent = `intent://${path}#Intent;scheme=onpoint;package=com.anonymous.sportsapp;end`;
-        window.location.href = intent;
+        window.location.href = `intent://${path}#Intent;scheme=onpoint;package=com.anonymous.sportsapp;end`;
       } catch {
         /* ignore */
       }
-    }, 400);
+    }, 250);
   }
 
   return true;
@@ -54,15 +69,16 @@ export function buildAppReturnHref(
   appReturn: string,
   extras: { orderId?: string; paid?: boolean } = {},
 ) {
+  const raw = String(appReturn || DEFAULT_APP_RETURN).trim() || DEFAULT_APP_RETURN;
   const orderId = extras.orderId || "";
   const paid = extras.paid ? "1" : "0";
   try {
-    const url = new URL(appReturn);
+    const url = new URL(raw);
     if (orderId) url.searchParams.set("orderId", orderId);
     url.searchParams.set("paid", paid);
     return url.toString();
   } catch {
-    const join = appReturn.includes("?") ? "&" : "?";
-    return `${appReturn}${join}orderId=${encodeURIComponent(orderId)}&paid=${paid}`;
+    const join = raw.includes("?") ? "&" : "?";
+    return `${raw}${join}orderId=${encodeURIComponent(orderId)}&paid=${paid}`;
   }
 }

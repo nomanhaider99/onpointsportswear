@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { paymentsApi } from "@/lib/api/client";
 import { AppReturnButton } from "@/components/checkout/AppReturnButton";
-import { bounceToApp } from "@/lib/app-return";
+import { DEFAULT_APP_RETURN, bounceToApp } from "@/lib/app-return";
 import { markJerseyStudioCartForClear } from "@/lib/jersey-cart-clear";
 import { clearCart } from "@/store/features/cart/cartSlice";
 import { useAppDispatch } from "@/store/hooks";
@@ -16,8 +16,10 @@ export default function CheckoutSuccessInner() {
   const dispatch = useAppDispatch();
   const orderId = params.get("orderId") || "";
   const guest = params.get("guest") || "";
-  const appReturn = params.get("appReturn") || "";
-  const fromApp = params.get("source") === "app" || Boolean(appReturn);
+  const appReturnParam = params.get("appReturn") || "";
+  const appReturn = appReturnParam || DEFAULT_APP_RETURN;
+  const fromApp =
+    params.get("source") === "app" || Boolean(appReturnParam) || params.get("paid") === "1";
   const cancelled = params.get("cancelled") === "1";
   const hintPaid = params.get("paid") === "1" || params.get("paid") === "true";
   const [paid, setPaid] = useState(false);
@@ -27,26 +29,34 @@ export default function CheckoutSuccessInner() {
   const bouncedRef = useRef(false);
 
   const sendToApp = (isPaid: boolean) => {
-    if (!fromApp || !appReturn || bouncedRef.current) return;
+    if (!fromApp || bouncedRef.current) return;
     bouncedRef.current = true;
     bounceToApp(appReturn, { orderId, paid: isPaid });
   };
 
-  // Cancel / app return: bounce immediately so the in-app browser closes.
+  // Close the in-app browser ASAP — do not wait for poll.
   useEffect(() => {
-    if (!fromApp || !appReturn) return;
+    if (!fromApp) return;
     if (cancelled) {
       setLoading(false);
       setError("Payment cancelled. Returning to the app…");
       sendToApp(false);
       return;
     }
-    // Optimistic bounce for app users — Stripe only hits this URL after checkout.
-    if (hintPaid) {
-      const t = window.setTimeout(() => sendToApp(true), 600);
-      return () => window.clearTimeout(t);
-    }
-    return undefined;
+    // Immediate + retry — Custom Tabs sometimes ignore the first navigation.
+    sendToApp(!cancelled);
+    const t1 = window.setTimeout(() => {
+      bouncedRef.current = false;
+      sendToApp(!cancelled);
+    }, 500);
+    const t2 = window.setTimeout(() => {
+      bouncedRef.current = false;
+      sendToApp(!cancelled);
+    }, 1500);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fromApp, appReturn, cancelled, hintPaid, orderId]);
 
@@ -82,9 +92,10 @@ export default function CheckoutSuccessInner() {
           return;
         }
         attempts += 1;
-        if (fromApp && appReturn && attempts >= 2) {
+        if (fromApp && attempts >= 1) {
           setLoading(false);
-          setError("Payment is still processing. Returning you to the app…");
+          setPaid(Boolean(hintPaid));
+          setError("Returning you to the app…");
           sendToApp(Boolean(hintPaid));
           return;
         }
@@ -117,24 +128,24 @@ export default function CheckoutSuccessInner() {
       {loading ? (
         <div className="flex flex-col items-center gap-3 text-white">
           <Loader2 className="h-10 w-10 animate-spin text-primary" />
-          <p>{fromApp ? "Confirming payment and returning to the app…" : "Confirming your payment…"}</p>
-          {fromApp && appReturn ? (
+          <p>{fromApp ? "Payment OK — closing and returning to the app…" : "Confirming your payment…"}</p>
+          {fromApp ? (
             <AppReturnButton
               appReturn={appReturn}
               orderId={orderId}
-              paid={hintPaid && !cancelled}
-              label="Return to app now"
+              paid={!cancelled}
+              label="Tap to return to app"
             />
           ) : null}
         </div>
-      ) : paid ? (
+      ) : paid || (fromApp && hintPaid && !cancelled) ? (
         <div className="rounded-xl border border-border bg-card p-8">
           <CheckCircle2 className="mx-auto h-12 w-12 text-primary" />
           <h1 className="mt-4 text-2xl font-bold uppercase text-white">Payment successful</h1>
           <p className="mt-2 text-white/70">
             Thanks — your order {trackingId || orderId} is paid and being processed.
           </p>
-          {fromApp && appReturn ? (
+          {fromApp ? (
             <AppReturnButton appReturn={appReturn} orderId={orderId} paid label="Back to app" />
           ) : (
             <Link
@@ -151,7 +162,7 @@ export default function CheckoutSuccessInner() {
             {cancelled ? "Payment cancelled" : "Payment status"}
           </h1>
           <p className="mt-2 text-white/80">{error || "Payment not confirmed yet."}</p>
-          {fromApp && appReturn ? (
+          {fromApp ? (
             <AppReturnButton
               appReturn={appReturn}
               orderId={orderId}
