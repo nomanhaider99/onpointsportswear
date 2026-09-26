@@ -86,6 +86,14 @@ export function AccountMenu({ className = "" }: { className?: string }) {
             Account
           </Link>
           <Link
+            href="/account/profile"
+            role="menuitem"
+            onClick={() => setOpen(false)}
+            className="block px-3 py-2.5 text-sm text-white/85 hover:bg-white/5 hover:text-primary"
+          >
+            Edit Profile
+          </Link>
+          <Link
             href="/account/designs"
             role="menuitem"
             onClick={() => setOpen(false)}
@@ -100,6 +108,14 @@ export function AccountMenu({ className = "" }: { className?: string }) {
             className="block px-3 py-2.5 text-sm text-white/85 hover:bg-white/5 hover:text-primary"
           >
             Order History
+          </Link>
+          <Link
+            href="/account/wishlist"
+            role="menuitem"
+            onClick={() => setOpen(false)}
+            className="block px-3 py-2.5 text-sm text-white/85 hover:bg-white/5 hover:text-primary"
+          >
+            Wishlist
           </Link>
           <button
             type="button"

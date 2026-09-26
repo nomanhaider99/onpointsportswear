@@ -39,6 +39,20 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "**.amazonaws.com",
       },
+      {
+        protocol: "https",
+        hostname: "**.cloudfront.net",
+      },
+      {
+        protocol: "https",
+        hostname: "betterbuildsc.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "**.betterbuildsc.com",
+        pathname: "/**",
+      },
     ],
   },
 };

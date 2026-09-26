@@ -1,9 +1,9 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { designsApi, getStoredToken } from "@/lib/api/client";
+import { designsApi, getStoredToken, mediaUrl } from "@/lib/api/client";
+import { accountLoginHref } from "@/lib/auth-gate";
 import { editSavedDesignHref } from "@/lib/jersey-studio";
 import { notify } from "@/lib/notify";
 import { formatPrice } from "@/lib/utils";
@@ -32,6 +32,33 @@ function formatSaved(value?: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "Saved recently";
   return `Saved ${date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+}
+
+function DesignThumb({
+  src,
+  alt,
+}: {
+  src: string;
+  alt: string;
+}) {
+  const [failed, setFailed] = useState(false);
+  const resolved = mediaUrl(src) || src;
+  if (!resolved || failed) {
+    return (
+      <div className="flex h-full w-full items-center justify-center bg-[#12141f] text-xs text-white/35">
+        No preview
+      </div>
+    );
+  }
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={resolved}
+      alt={alt}
+      className="h-full w-full object-contain p-4"
+      onError={() => setFailed(true)}
+    />
+  );
 }
 
 export default function MyDesignsPage() {
@@ -69,7 +96,7 @@ export default function MyDesignsPage() {
         <h1 className="text-2xl font-semibold text-white">My Designs</h1>
         <p className="mt-2 text-sm text-white/70">Sign in to see designs saved to your account.</p>
         <Link
-          href="/account?login=1&returnTo=%2Faccount%2Fdesigns"
+          href={accountLoginHref("/account/designs")}
           className="mt-6 inline-flex rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground"
         >
           Sign in
@@ -105,7 +132,11 @@ export default function MyDesignsPage() {
         <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((item) => {
             const id = String(item._id || item.id || "");
-            const thumb = item.previewUrl || item.product?.thumbnail || "/images/logo.png";
+            const thumb =
+              item.previewUrl ||
+              item.product?.thumbnail ||
+              item.product?.images?.[0] ||
+              "";
             const href = editSavedDesignHref(item);
             return (
               <li
@@ -113,16 +144,7 @@ export default function MyDesignsPage() {
                 className="overflow-hidden rounded-lg border border-white/10 bg-white/[0.03]"
               >
                 <div className="relative aspect-square bg-[#12141f]">
-                  {thumb.startsWith("http") || thumb.startsWith("/") ? (
-                    <Image
-                      src={thumb}
-                      alt={item.name || "Custom design"}
-                      fill
-                      className="object-contain p-4"
-                      sizes="(max-width: 640px) 100vw, 33vw"
-                      unoptimized
-                    />
-                  ) : null}
+                  <DesignThumb src={thumb} alt={item.name || "Custom design"} />
                 </div>
                 <div className="space-y-2 p-4">
                   <p className="font-semibold text-white">{item.name || "Custom Design"}</p>

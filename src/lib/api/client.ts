@@ -82,7 +82,14 @@ export function mediaUrl(url?: string | null) {
   if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/i.test(url)) {
     return url.replace(/^https?:\/\/[^/]+/i, API_ORIGIN);
   }
+  // Relative API / uploads / media keys from the backend
   if (url.startsWith("/")) return `${API_ORIGIN}${url}`;
+  if (/^(custom|products|categories|coupons|avatars)\//i.test(url)) {
+    return `${API_ORIGIN}/api/media/${url
+      .split("/")
+      .map((part) => encodeURIComponent(part))
+      .join("/")}`;
+  }
   return url;
 }
 
@@ -180,6 +187,10 @@ export const authApi = {
   register: (body: Record<string, unknown>) =>
     api<{ token?: string; user?: AuthUser; message?: string }>("/auth/register", { method: "POST", body }),
   me: (token?: string) => api<{ user: AuthUser }>("/auth/me", { token }),
+  updateMe: (body: Record<string, unknown>) =>
+    api<{ user: AuthUser }>("/auth/me", { method: "PATCH", body }),
+  changePassword: (body: { currentPassword: string; newPassword: string }) =>
+    api("/auth/password", { method: "PUT", body }),
   forgotPassword: (email: string) => api("/auth/forgot-password", { method: "POST", body: { email } }),
   resetPassword: (token: string, password: string) =>
     api("/auth/reset-password", { method: "POST", body: { token, password } }),
@@ -193,6 +204,8 @@ export type AuthUser = {
   email: string;
   role?: string;
   phone?: string;
+  avatar?: string;
+  notificationPrefs?: Record<string, boolean>;
 };
 
 export const catalogApi = {

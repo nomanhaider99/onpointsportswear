@@ -3,7 +3,21 @@
 import { FormEvent, Suspense, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { authApi, getStoredToken, setStoredToken } from "@/lib/api/client";
+import {
+  Bell,
+  CreditCard,
+  Heart,
+  HelpCircle,
+  Lock,
+  LogOut,
+  MapPin,
+  Palette,
+  Receipt,
+  Settings,
+  User,
+} from "lucide-react";
+import { AccountMenuRow } from "@/components/account/AccountChrome";
+import { authApi, getStoredToken, mediaUrl, setStoredToken } from "@/lib/api/client";
 import { JERSEY_STUDIO_URL } from "@/lib/config";
 import { notify } from "@/lib/notify";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
@@ -47,18 +61,34 @@ function AccountHub() {
   const { user } = useAppSelector((state) => state.auth);
   const searchParams = useSearchParams();
   const returnRaw = searchParams.get("returnTo") || "";
+  const [confirmOut, setConfirmOut] = useState(false);
 
   const continueDest = useMemo(() => {
     if (!returnRaw) return null;
     return resolveReturnTarget(returnRaw, getStoredToken());
   }, [returnRaw]);
 
+  const avatar = mediaUrl(user?.avatar);
+  const initial = String(user?.name || user?.email || "U")
+    .trim()
+    .charAt(0)
+    .toUpperCase();
+
   return (
-    <div className="mx-auto max-w-lg px-4 py-16">
-      <h1 className="text-2xl font-semibold text-white">Account</h1>
-      <p className="mt-1 text-sm text-white/70">
-        Signed in as {user?.name || user?.email || "member"} — same account as the app.
-      </p>
+    <div className="mx-auto max-w-lg px-4 py-10">
+      <p className="text-xs font-bold uppercase tracking-wider text-white/45">Profile</p>
+      <div className="mt-4 flex flex-col items-center text-center">
+        <div className="relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-[#1b2230] text-2xl font-extrabold text-primary">
+          {avatar ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={avatar} alt="" className="h-full w-full object-cover" />
+          ) : (
+            initial
+          )}
+        </div>
+        <p className="mt-3 text-lg font-extrabold text-white">{user?.name || "Member"}</p>
+        <p className="text-sm text-white/55">{user?.email}</p>
+      </div>
 
       {continueDest ? (
         <button
@@ -73,45 +103,54 @@ function AccountHub() {
         </button>
       ) : null}
 
-      <ul className="mt-8 divide-y divide-white/10 overflow-hidden rounded-lg border border-white/10">
-        <li>
-          <Link
-            href="/account/designs"
-            className="block px-4 py-3.5 text-sm font-medium text-white hover:bg-white/5 hover:text-primary"
-          >
-            My Designs
-          </Link>
-        </li>
-        <li>
-          <Link
-            href="/account/orders"
-            className="block px-4 py-3.5 text-sm font-medium text-white hover:bg-white/5 hover:text-primary"
-          >
-            Order History
-          </Link>
-        </li>
-        <li>
-          <Link
-            href="/cart"
-            className="block px-4 py-3.5 text-sm font-medium text-white hover:bg-white/5 hover:text-primary"
-          >
-            Cart &amp; checkout
-          </Link>
-        </li>
-        <li>
-          <button
-            type="button"
-            onClick={() => {
-              dispatch(logout());
-              notify.success("Signed out");
-              router.push("/");
-            }}
-            className="block w-full px-4 py-3.5 text-left text-sm font-medium text-[#ff8f8f] hover:bg-white/5"
-          >
-            Sign out
-          </button>
-        </li>
-      </ul>
+      <div className="mt-8 flex flex-col gap-2.5">
+        <AccountMenuRow href="/account/profile" icon={<User size={18} />} label="Edit Profile" />
+        <AccountMenuRow href="/account/settings" icon={<Settings size={18} />} label="Settings" />
+        <AccountMenuRow href="/account/notifications" icon={<Bell size={18} />} label="Notifications" />
+        <AccountMenuRow href="/account/password" icon={<Lock size={18} />} label="Change Password" />
+        <AccountMenuRow href="/account/addresses" icon={<MapPin size={18} />} label="Addresses" />
+        <AccountMenuRow href="/account/payments" icon={<CreditCard size={18} />} label="Payment Methods" />
+        <AccountMenuRow href="/account/wishlist" icon={<Heart size={18} />} label="Wishlist" />
+        <AccountMenuRow href="/account/designs" icon={<Palette size={18} />} label="My Designs" />
+        <AccountMenuRow href="/account/orders" icon={<Receipt size={18} />} label="Order History" />
+        <AccountMenuRow href="/account/help" icon={<HelpCircle size={18} />} label="Help & Support" />
+        <AccountMenuRow
+          icon={<LogOut size={18} />}
+          label="Log Out"
+          danger
+          onClick={() => setConfirmOut(true)}
+        />
+      </div>
+
+      {confirmOut ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#151822] p-5 text-center">
+            <p className="text-lg font-bold text-white">Log Out</p>
+            <p className="mt-2 text-sm text-white/60">Are you sure you want to leave your account?</p>
+            <div className="mt-5 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirmOut(false)}
+                className="flex-1 rounded-lg border border-white/15 px-3 py-2.5 text-sm font-semibold text-white"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setConfirmOut(false);
+                  dispatch(logout());
+                  notify.success("Signed out");
+                  router.push("/");
+                }}
+                className="flex-1 rounded-lg bg-[#d9534f] px-3 py-2.5 text-sm font-semibold text-white"
+              >
+                Log Out
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -176,7 +215,7 @@ function AccountAuthForms() {
         {mode === "login" ? "Sign in" : "Create account"}
       </h1>
       <p className="mt-2 text-sm text-white/70">
-        Same account as the app — save designs, edit later, and checkout on the website.
+        Same account as the app — designs, orders, and profile sync across website and mobile.
       </p>
 
       <div className="mt-6 flex gap-2">
@@ -245,6 +284,10 @@ function AccountAuthForms() {
           {busy ? "Please wait…" : mode === "login" ? "Sign in" : "Create account"}
         </button>
       </form>
+      <p className="mt-4 text-center text-xs text-white/40">
+        Or browse <Link href="/products" className="text-primary underline">products</Link> without
+        an account.
+      </p>
     </div>
   );
 }

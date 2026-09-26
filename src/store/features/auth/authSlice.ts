@@ -53,13 +53,17 @@ export const register = createAsyncThunk(
   },
 );
 
-export const forgotPassword = createAsyncThunk("auth/forgot", async (email: string, { rejectWithValue }) => {
-  try {
-    return await authApi.forgotPassword(email);
-  } catch (error) {
-    return rejectWithValue(apiMessage(error, "Could not send reset email"));
-  }
-});
+export const updateProfile = createAsyncThunk(
+  "auth/updateProfile",
+  async (body: Record<string, unknown>, { rejectWithValue }) => {
+    try {
+      const data = await authApi.updateMe(body);
+      return data.user || (data as unknown as AuthUser);
+    } catch (error) {
+      return rejectWithValue(apiMessage(error, "Could not update profile"));
+    }
+  },
+);
 
 const authSlice = createSlice({
   name: "auth",
@@ -96,6 +100,9 @@ const authSlice = createSlice({
       .addCase(register.fulfilled, (state, action) => {
         state.token = action.payload.token || state.token;
         state.user = action.payload.user || state.user;
+      })
+      .addCase(updateProfile.fulfilled, (state, action) => {
+        state.user = action.payload;
       });
   },
 });
