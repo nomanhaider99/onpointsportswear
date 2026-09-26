@@ -5,28 +5,11 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { paymentsApi } from "@/lib/api/client";
+import { AppReturnButton } from "@/components/checkout/AppReturnButton";
+import { bounceToApp } from "@/lib/app-return";
 import { markJerseyStudioCartForClear } from "@/lib/jersey-cart-clear";
 import { clearCart } from "@/store/features/cart/cartSlice";
 import { useAppDispatch } from "@/store/hooks";
-
-function bounceToApp(appReturn: string, orderId: string, paid: boolean) {
-  if (!appReturn || typeof window === "undefined") return false;
-  try {
-    const url = new URL(appReturn);
-    url.searchParams.set("orderId", orderId);
-    url.searchParams.set("paid", paid ? "1" : "0");
-    window.location.href = url.toString();
-    return true;
-  } catch {
-    try {
-      const join = appReturn.includes("?") ? "&" : "?";
-      window.location.href = `${appReturn}${join}orderId=${encodeURIComponent(orderId)}&paid=${paid ? "1" : "0"}`;
-      return true;
-    } catch {
-      return false;
-    }
-  }
-}
 
 export default function CheckoutSuccessInner() {
   const params = useSearchParams();
@@ -40,6 +23,12 @@ export default function CheckoutSuccessInner() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [bounced, setBounced] = useState(false);
+
+  const sendToApp = (isPaid: boolean) => {
+    if (!fromApp || !appReturn || bounced) return;
+    setBounced(true);
+    bounceToApp(appReturn, { orderId, paid: isPaid });
+  };
 
   useEffect(() => {
     if (!orderId) {
@@ -68,33 +57,31 @@ export default function CheckoutSuccessInner() {
           setLoading(false);
           dispatch(clearCart());
           markJerseyStudioCartForClear();
-          if (fromApp && appReturn && !bounced) {
-            setBounced(true);
-            bounceToApp(appReturn, orderId, true);
-          }
+          sendToApp(true);
           return;
         }
         attempts += 1;
+        // For app checkouts, don't leave the user on the website — bounce after a short wait.
+        if (fromApp && appReturn && attempts >= 2) {
+          setLoading(false);
+          setError("Payment is still processing. Returning you to the app…");
+          sendToApp(false);
+          return;
+        }
         if (attempts < 12) {
-          setTimeout(poll, 1500);
+          setTimeout(poll, 1200);
         } else {
           setLoading(false);
           setError(
             "Payment is still processing. If you were charged, your order will update shortly.",
           );
-          if (fromApp && appReturn && !bounced) {
-            setBounced(true);
-            bounceToApp(appReturn, orderId, false);
-          }
+          sendToApp(false);
         }
       } catch (err) {
         if (cancelled) return;
         setLoading(false);
         setError(err instanceof Error ? err.message : "Could not verify payment.");
-        if (fromApp && appReturn && !bounced) {
-          setBounced(true);
-          bounceToApp(appReturn, orderId, false);
-        }
+        sendToApp(false);
       }
     };
 
@@ -102,7 +89,8 @@ export default function CheckoutSuccessInner() {
     return () => {
       cancelled = true;
     };
-  }, [orderId, guest, dispatch, fromApp, appReturn, bounced]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- bounce once per mount
+  }, [orderId, guest, dispatch, fromApp, appReturn]);
 
   return (
     <main className="mx-auto max-w-xl px-4 py-16 text-center">
@@ -119,16 +107,7 @@ export default function CheckoutSuccessInner() {
             Thanks — your order {trackingId || orderId} is paid and being processed.
           </p>
           {fromApp && appReturn ? (
-            <a
-              href="#"
-              onClick={(event) => {
-                event.preventDefault();
-                bounceToApp(appReturn, orderId, true);
-              }}
-              className="mt-6 inline-flex rounded-lg bg-primary px-6 py-3 text-primary-foreground"
-            >
-              Back to app
-            </a>
+            <AppReturnButton appReturn={appReturn} orderId={orderId} paid label="Back to app" />
           ) : (
             <Link
               href="/products"
@@ -143,13 +122,12 @@ export default function CheckoutSuccessInner() {
           <h1 className="text-xl font-bold text-white">Payment status</h1>
           <p className="mt-2 text-white/80">{error || "Payment not confirmed yet."}</p>
           {fromApp && appReturn ? (
-            <button
-              type="button"
-              className="mt-4 text-primary underline"
-              onClick={() => bounceToApp(appReturn, orderId, false)}
-            >
-              Return to app
-            </button>
+            <AppReturnButton
+              appReturn={appReturn}
+              orderId={orderId}
+              paid={false}
+              label="Return to app"
+            />
           ) : (
             <Link href="/checkout" className="mt-4 inline-block text-primary underline">
               Back to checkout
