@@ -133,10 +133,14 @@ export function CheckoutFlow() {
 
       if (paymentMethod === "stripe") {
         const origin = window.location.origin;
+        const guestToken = String(result.guestToken || "");
+        if (!result.orderId) {
+          throw new Error("Order was created but no order id was returned. Please try again.");
+        }
         const session = await paymentsApi.stripeCheckoutSession({
           orderId: result.orderId,
-          guestToken: result.guestToken,
-          successUrl: `${origin}/checkout/success?orderId={ORDER_ID}&guest=${encodeURIComponent(result.guestToken || "")}`,
+          guestToken,
+          successUrl: `${origin}/checkout/success?orderId={ORDER_ID}&guest=${encodeURIComponent(guestToken)}`,
           cancelUrl: `${origin}/checkout?cancelled=1&orderId={ORDER_ID}`,
         });
         if (!session.url) throw new Error("Stripe checkout URL missing");
@@ -147,7 +151,10 @@ export function CheckoutFlow() {
       }
 
       if (paymentMethod === "paypal") {
-        setPendingPaypal({ orderId: result.orderId, guestToken: result.guestToken });
+        setPendingPaypal({
+          orderId: result.orderId,
+          guestToken: String(result.guestToken || ""),
+        });
         notify.success("Order created — complete PayPal payment below.");
       }
     } catch (error) {

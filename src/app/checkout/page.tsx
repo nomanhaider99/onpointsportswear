@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
+import { CheckoutAppReturnBounce } from "@/components/checkout/CheckoutAppReturnBounce";
 import { CheckoutFlow } from "@/components/checkout/CheckoutFlow";
 import { Section } from "@/components/ui/Section";
 import { SectionHeading } from "@/components/ui/SectionHeading";
@@ -19,6 +21,9 @@ export default function CheckoutPage() {
         </SectionHeading>
       </div>
       <div className="container-site mt-[50px]">
+        <Suspense fallback={null}>
+          <CheckoutAppReturnBounce />
+        </Suspense>
         <CheckoutFlow />
       </div>
     </Section>
