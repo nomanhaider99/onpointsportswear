@@ -1,22 +1,34 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect } from "react";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import { CartItemThumb } from "@/components/cart/CartItemThumb";
+import { CartTotalsBreakdown } from "@/components/cart/CartTotalsBreakdown";
 import { cartItemCompareAt, useCart } from "@/lib/cart";
 import { formatPrice } from "@/lib/utils";
-import { useAppSelector } from "@/store/hooks";
+import { fetchShopCatalog } from "@/store/features/catalog/catalogSlice";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
 export function CartView() {
-  const { items, subtotal, removeItem, incrementItem, decrementItem, updateQuantity, clearCart } =
-    useCart();
+  const {
+    items,
+    totals,
+    couponCode,
+    applyCoupon,
+    removeCoupon,
+    removeItem,
+    incrementItem,
+    decrementItem,
+    updateQuantity,
+    clearCart,
+  } = useCart();
+  const dispatch = useAppDispatch();
   const catalog = useAppSelector((state) => state.catalog.products);
-  const originalTotal = items.reduce((sum, item) => {
-    const listed = catalog.find((product) => product.slug === item.slug)?.originalPrice;
-    const compare = cartItemCompareAt(item, listed);
-    return sum + (compare || item.price) * item.quantity;
-  }, 0);
-  const discount = Math.max(0, originalTotal - subtotal);
+
+  useEffect(() => {
+    if (!catalog.length) void dispatch(fetchShopCatalog());
+  }, [catalog.length, dispatch]);
 
   if (items.length === 0) {
     return (
@@ -50,9 +62,7 @@ export function CartView() {
               >
                 <CartItemThumb
                   item={item}
-                  catalogImage={
-                    catalog.find((product) => product.slug === item.slug)?.image
-                  }
+                  catalogImage={catalog.find((product) => product.slug === item.slug)?.image}
                   sizes="120px"
                 />
               </Link>
@@ -163,35 +173,15 @@ export function CartView() {
 
       <aside className="h-fit rounded-xl border border-border bg-card p-6">
         <h2 className="text-xl font-bold uppercase text-white">Cart Totals</h2>
-        <dl className="mt-5 space-y-3 text-base">
-          <div className="flex items-center justify-between">
-            <dt className="text-white/70">Items</dt>
-            <dd className="text-white" aria-live="polite">
-              {items.reduce((total, item) => total + item.quantity, 0)}
-            </dd>
-          </div>
-          {discount > 0 ? (
-            <>
-              <div className="flex items-center justify-between">
-                <dt className="text-white/70">Original</dt>
-                <dd className="text-white/60 line-through">{formatPrice(originalTotal)}</dd>
-              </div>
-              <div className="flex items-center justify-between">
-                <dt className="text-white/70">Discount</dt>
-                <dd className="font-semibold text-primary">-{formatPrice(discount)}</dd>
-              </div>
-            </>
-          ) : null}
-          <div className="flex items-center justify-between border-t border-border pt-3">
-            <dt className="text-white/70">Subtotal</dt>
-            <dd className="text-lg font-semibold text-primary" aria-live="polite">
-              {formatPrice(subtotal)}
-            </dd>
-          </div>
-        </dl>
-        <p className="mt-4 text-sm text-white/60">
-          Taxes and shipping are confirmed when we quote your team order.
-        </p>
+        <div className="mt-5">
+          <CartTotalsBreakdown
+            totals={totals}
+            couponCode={couponCode}
+            onApplyCoupon={applyCoupon}
+            onRemoveCoupon={removeCoupon}
+            showPromo
+          />
+        </div>
         <Link
           href="/checkout"
           className="mt-6 flex justify-center rounded-lg bg-primary px-6 py-3 text-base text-primary-foreground transition-colors duration-300 hover:bg-[#029b36]"

@@ -8,12 +8,16 @@ import { notify } from "@/lib/notify";
 import {
   addCartItem,
   clearCart as clearCartAction,
+  clearCartCoupon,
   decrementCartItem,
   incrementCartItem,
   removeCartItem,
+  setCartCoupon,
   updateCartQuantity,
 } from "@/store/features/cart/cartSlice";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { cartItemsForQuote, computeCartTotals } from "@/lib/cart-totals";
+import { ordersApi } from "@/lib/api/client";
 
 export interface CartItem {
   key: string;
@@ -74,6 +78,9 @@ export interface AddItemResult {
 export function useCart() {
   const dispatch = useAppDispatch();
   const currentItems = useAppSelector((state) => state.cart.items);
+  const couponCode = useAppSelector((state) => state.cart.couponCode);
+  const couponDiscount = useAppSelector((state) => state.cart.couponDiscount);
+  const catalog = useAppSelector((state) => state.catalog.products);
 
   const addItem = useCallback(
     (
@@ -128,12 +135,55 @@ export function useCart() {
     if (!options?.silent) notify.info("Cart cleared");
   }, [dispatch]);
 
+  const applyCoupon = useCallback(
+    async (code: string) => {
+      const trimmed = code.trim();
+      if (!trimmed) throw new Error("Enter a promo code");
+      if (!currentItems.length) throw new Error("Your cart is empty");
+      const quote = await ordersApi.quote({
+        items: cartItemsForQuote(currentItems),
+        couponCode: trimmed,
+      });
+      const discount = Number(quote.discount_total ?? quote.couponDiscount ?? 0) || 0;
+      const applied = String(quote.couponCode || trimmed).toUpperCase();
+      if (!applied || discount <= 0) {
+        throw new Error("This coupon does not apply to your cart");
+      }
+      dispatch(setCartCoupon({ code: applied, discount }));
+      notify.success(`${applied} applied`);
+    },
+    [currentItems, dispatch],
+  );
+
+  const removeCoupon = useCallback(() => {
+    dispatch(clearCartCoupon());
+    notify.info("Promo code removed");
+  }, [dispatch]);
+
+  const catalogOriginalBySlug = useMemo(() => {
+    const map: Record<string, number | undefined> = {};
+    for (const product of catalog) {
+      map[product.slug] = product.originalPrice;
+    }
+    return map;
+  }, [catalog]);
+
+  const totals = useMemo(
+    () =>
+      computeCartTotals({
+        items: currentItems,
+        catalogOriginalBySlug,
+        couponDiscount,
+      }),
+    [currentItems, catalogOriginalBySlug, couponDiscount],
+  );
+
   const { count, subtotal } = useMemo(
     () => ({
-      count: currentItems.reduce((total, item) => total + item.quantity, 0),
-      subtotal: currentItems.reduce((total, item) => total + item.price * item.quantity, 0),
+      count: totals.itemCount,
+      subtotal: totals.subtotal,
     }),
-    [currentItems],
+    [totals],
   );
 
   return {
@@ -141,6 +191,11 @@ export function useCart() {
     kind: getCartKind(currentItems),
     count,
     subtotal,
+    totals,
+    couponCode,
+    couponDiscount,
+    applyCoupon,
+    removeCoupon,
     addItem,
     removeItem,
     updateQuantity,

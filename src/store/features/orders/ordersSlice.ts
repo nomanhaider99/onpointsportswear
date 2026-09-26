@@ -91,6 +91,9 @@ export const placeOrder = createAsyncThunk(
           email: draft.details.email,
         },
         items: orderItems,
+        couponCode: (
+          getState() as { cart: { couponCode?: string } }
+        ).cart.couponCode || undefined,
       });
       return {
         reference: String(data.trackingId || data.order?.trackingId || draft.reference),

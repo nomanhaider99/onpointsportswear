@@ -6,9 +6,12 @@ import { getAddToCartIssue, getCartKind, type CartItem } from "@/lib/cart";
 import type { CartItemCustomization } from "@/lib/customization";
 
 const STORAGE_KEY = "op-cart-v1";
+const COUPON_KEY = "op-cart-coupon-v1";
 
 type CartState = {
   items: CartItem[];
+  couponCode: string;
+  couponDiscount: number;
 };
 
 function makeKey(slug: string, size: string, customizationId?: string) {
@@ -25,6 +28,22 @@ function readStored(): CartItem[] {
   }
 }
 
+function readCoupon(): { code: string; discount: number } {
+  if (typeof window === "undefined") return { code: "", discount: 0 };
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(COUPON_KEY) || "{}") as {
+      code?: string;
+      discount?: number;
+    };
+    return {
+      code: String(parsed.code || ""),
+      discount: Number(parsed.discount || 0) || 0,
+    };
+  } catch {
+    return { code: "", discount: 0 };
+  }
+}
+
 function withProxiedImages(items: CartItem[]) {
   return items.map((item) => ({ ...item, image: mediaUrl(item.image) || item.image }));
 }
@@ -38,12 +57,25 @@ function persist(items: CartItem[]) {
   }
 }
 
+function persistCoupon(code: string, discount: number) {
+  if (typeof window === "undefined") return;
+  try {
+    if (!code) window.localStorage.removeItem(COUPON_KEY);
+    else window.localStorage.setItem(COUPON_KEY, JSON.stringify({ code, discount }));
+  } catch {
+    /* ignore */
+  }
+}
+
 const cartSlice = createSlice({
   name: "cart",
-  initialState: { items: [] } as CartState,
+  initialState: { items: [], couponCode: "", couponDiscount: 0 } as CartState,
   reducers: {
     hydrateCart(state) {
       state.items = withProxiedImages(readStored());
+      const coupon = readCoupon();
+      state.couponCode = coupon.code;
+      state.couponDiscount = coupon.discount;
     },
     addCartItem(
       state,
@@ -110,7 +142,23 @@ const cartSlice = createSlice({
     },
     clearCart(state) {
       state.items = [];
+      state.couponCode = "";
+      state.couponDiscount = 0;
       persist(state.items);
+      persistCoupon("", 0);
+    },
+    setCartCoupon(
+      state,
+      action: PayloadAction<{ code: string; discount: number }>,
+    ) {
+      state.couponCode = String(action.payload.code || "").trim().toUpperCase();
+      state.couponDiscount = Math.max(0, Number(action.payload.discount) || 0);
+      persistCoupon(state.couponCode, state.couponDiscount);
+    },
+    clearCartCoupon(state) {
+      state.couponCode = "";
+      state.couponDiscount = 0;
+      persistCoupon("", 0);
     },
     /** Jersey studio / iframe handoff — merge a ready-made cart line. */
     upsertStudioCartItem(state, action: PayloadAction<CartItem>) {
@@ -166,6 +214,8 @@ export const {
   incrementCartItem,
   decrementCartItem,
   clearCart,
+  setCartCoupon,
+  clearCartCoupon,
   upsertStudioCartItem,
   replaceCartItems,
 } = cartSlice.actions;

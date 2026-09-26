@@ -3,7 +3,9 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { CartItemThumb } from "@/components/cart/CartItemThumb";
-import { cartItemCompareAt, type CartItem } from "@/lib/cart";
+import { CartTotalsBreakdown } from "@/components/cart/CartTotalsBreakdown";
+import { cartItemCompareAt, useCart, type CartItem } from "@/lib/cart";
+import { computeCartTotals } from "@/lib/cart-totals";
 import { formatPrice } from "@/lib/utils";
 import { fetchShopCatalog } from "@/store/features/catalog/catalogSlice";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
@@ -11,31 +13,33 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks";
 /** Order summary panel, shown alongside every checkout step. */
 export function OrderSummary({
   items,
-  subtotal,
   editable = true,
 }: {
   items: CartItem[];
-  subtotal: number;
-  /** The confirmation step shows the same lines without a link back to the cart. */
+  /** Kept for callers that still pass it; totals are computed from items + coupon. */
+  subtotal?: number;
   editable?: boolean;
 }) {
   const dispatch = useAppDispatch();
   const catalog = useAppSelector((state) => state.catalog.products);
   const bySlug = useAppSelector((state) => state.catalog.bySlug);
+  const { couponCode, couponDiscount, applyCoupon, removeCoupon } = useCart();
 
   useEffect(() => {
     if (!catalog.length) void dispatch(fetchShopCatalog());
   }, [catalog.length, dispatch]);
 
-  const listedOriginal = (slug: string) =>
-    catalog.find((product) => product.slug === slug)?.originalPrice ?? bySlug[slug]?.originalPrice;
+  const catalogOriginalBySlug: Record<string, number | undefined> = {};
+  for (const product of catalog) catalogOriginalBySlug[product.slug] = product.originalPrice;
+  for (const [slug, product] of Object.entries(bySlug)) {
+    if (catalogOriginalBySlug[slug] == null) catalogOriginalBySlug[slug] = product.originalPrice;
+  }
 
-  const itemCount = items.reduce((total, item) => total + item.quantity, 0);
-  const originalTotal = items.reduce((sum, item) => {
-    const compare = cartItemCompareAt(item, listedOriginal(item.slug));
-    return sum + (compare || item.price) * item.quantity;
-  }, 0);
-  const discount = Math.max(0, originalTotal - subtotal);
+  const totals = computeCartTotals({
+    items,
+    catalogOriginalBySlug,
+    couponDiscount,
+  });
 
   return (
     <aside className="h-fit rounded-xl border border-border bg-card p-6">
@@ -53,7 +57,7 @@ export function OrderSummary({
 
       <ul className="mt-5 space-y-4">
         {items.map((item) => {
-          const compare = cartItemCompareAt(item, listedOriginal(item.slug));
+          const compare = cartItemCompareAt(item, catalogOriginalBySlug[item.slug]);
           return (
             <li key={item.key} className="flex gap-3">
               <span className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-white/5">
@@ -93,33 +97,15 @@ export function OrderSummary({
         })}
       </ul>
 
-      <dl className="mt-5 space-y-3 border-t border-border pt-4 text-base">
-        <div className="flex items-center justify-between">
-          <dt className="text-white/70">Items</dt>
-          <dd className="text-white">{itemCount}</dd>
-        </div>
-        {discount > 0 ? (
-          <>
-            <div className="flex items-center justify-between">
-              <dt className="text-white/70">Original</dt>
-              <dd className="text-white/60 line-through">{formatPrice(originalTotal)}</dd>
-            </div>
-            <div className="flex items-center justify-between">
-              <dt className="text-white/70">Discount</dt>
-              <dd className="font-semibold text-primary">-{formatPrice(discount)}</dd>
-            </div>
-          </>
-        ) : null}
-        <div className="flex items-center justify-between">
-          <dt className="text-white/70">Subtotal</dt>
-          <dd className="text-lg font-semibold text-primary">{formatPrice(subtotal)}</dd>
-        </div>
-      </dl>
-
-      <p className="mt-4 text-sm text-white/60">
-        Taxes and shipping are confirmed when we quote your team order. No payment is taken
-        now.
-      </p>
+      <div className="mt-5 border-t border-border pt-4">
+        <CartTotalsBreakdown
+          totals={totals}
+          couponCode={couponCode}
+          onApplyCoupon={applyCoupon}
+          onRemoveCoupon={removeCoupon}
+          showPromo={editable}
+        />
+      </div>
     </aside>
   );
 }

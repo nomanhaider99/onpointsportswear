@@ -12,14 +12,8 @@ const FOCUSABLE =
   'a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])';
 
 export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { items, subtotal, removeItem, incrementItem, decrementItem } = useCart();
+  const { items, totals, removeItem, incrementItem, decrementItem } = useCart();
   const catalog = useAppSelector((state) => state.catalog.products);
-  const originalTotal = items.reduce((sum, item) => {
-    const listed = catalog.find((product) => product.slug === item.slug)?.originalPrice;
-    const compare = cartItemCompareAt(item, listed);
-    return sum + (compare || item.price) * item.quantity;
-  }, 0);
-  const discount = Math.max(0, originalTotal - subtotal);
   const panelRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
 
@@ -176,15 +170,27 @@ export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => vo
             </ul>
 
             <div className="border-t border-border px-5 py-4">
-              {discount > 0 ? (
-                <div className="mb-2 flex items-center justify-between text-sm">
-                  <span className="text-[#dddddd]">Discount</span>
-                  <span className="font-semibold text-primary">-{formatPrice(discount)}</span>
-                </div>
-              ) : null}
+              <div className="mb-2 flex items-center justify-between text-sm">
+                <span className="text-[#dddddd]">Shipping</span>
+                <span className={totals.shipping > 0 ? "text-white" : "font-semibold text-primary"}>
+                  {totals.shipping > 0 ? formatPrice(totals.shipping) : "FREE"}
+                </span>
+              </div>
+              <div className="mb-2 flex items-center justify-between text-sm">
+                <span className="text-[#dddddd]">Discount</span>
+                <span
+                  className={
+                    totals.discountTotal > 0 ? "font-semibold text-primary" : "text-white"
+                  }
+                >
+                  {totals.discountTotal > 0
+                    ? `-${formatPrice(totals.discountTotal)}`
+                    : formatPrice(0)}
+                </span>
+              </div>
               <div className="flex items-center justify-between text-base">
-                <span className="text-[#dddddd]">Subtotal</span>
-                <span className="font-semibold text-primary">{formatPrice(subtotal)}</span>
+                <span className="text-[#dddddd]">Total</span>
+                <span className="font-semibold text-primary">{formatPrice(totals.total)}</span>
               </div>
               <div className="mt-4 grid grid-cols-2 gap-3">
                 <Link
