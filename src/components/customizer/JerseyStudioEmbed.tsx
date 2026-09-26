@@ -6,6 +6,10 @@ import { JERSEY_STUDIO_URL } from "@/lib/config";
 import { designsApi, getStoredToken, uploadCustomPreview } from "@/lib/api/client";
 import { notify } from "@/lib/notify";
 import { getAddToCartIssue } from "@/lib/cart";
+import {
+  consumeJerseyStudioCartClearFlag,
+  pingJerseyStudioClearCart,
+} from "@/lib/jersey-cart-clear";
 import { removeCartItem, upsertStudioCartItem } from "@/store/features/cart/cartSlice";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import type { CartItem } from "@/lib/cart";
@@ -59,6 +63,7 @@ export function JerseyStudioEmbed() {
   const cartItems = useAppSelector((state) => state.cart.items);
   const [ready, setReady] = useState(false);
   const [blocked, setBlocked] = useState(false);
+  const [clearStudioCart, setClearStudioCart] = useState(() => consumeJerseyStudioCartClearFlag());
 
   const iframeSrc = useMemo(() => {
     if (!STUDIO_ORIGIN) return "";
@@ -66,9 +71,19 @@ export function JerseyStudioEmbed() {
     if (!params.has("embed")) params.set("embed", "web");
     const token = getStoredToken();
     if (token && !params.has("token")) params.set("token", token);
+    if (clearStudioCart) params.set("clearCart", "1");
     const qs = params.toString();
     return qs ? `${STUDIO_ORIGIN}/?${qs}` : `${STUDIO_ORIGIN}/?embed=web`;
-  }, [searchParams]);
+  }, [searchParams, clearStudioCart]);
+
+  useEffect(() => {
+    if (!ready || !clearStudioCart) return;
+    const timer = window.setTimeout(() => {
+      pingJerseyStudioClearCart();
+      setClearStudioCart(false);
+    }, 500);
+    return () => window.clearTimeout(timer);
+  }, [ready, clearStudioCart]);
 
   useEffect(() => {
     if (!getStoredToken()) {
@@ -102,6 +117,12 @@ export function JerseyStudioEmbed() {
       if (data.type === "op-jersey-add-to-cart" && data.cartItem) {
         let line = data.cartItem;
         const previewRaw = data.previewDataUrl || data.design?.previewDataUrl || "";
+        const incomingState = data.design?.state || line.customization?.designState || null;
+        const incomingSummary =
+          line.customization?.designSummary ||
+          data.design?.name ||
+          line.name ||
+          "Jersey studio design";
         try {
           if (getStoredToken()) {
             const saved = await persistStudioDesign(data);
@@ -127,6 +148,8 @@ export function JerseyStudioEmbed() {
                   ...(line.customization || {}),
                   previewUrl,
                   studio: "jersey",
+                  designSummary: incomingSummary,
+                  designState: incomingState || line.customization?.designState || null,
                 },
               };
             }
@@ -149,6 +172,8 @@ export function JerseyStudioEmbed() {
                 ...(line.customization || {}),
                 previewUrl: previewRaw,
                 studio: "jersey",
+                designSummary: incomingSummary,
+                designState: incomingState,
               },
             };
           } else if (previewRaw.startsWith("data:")) {
@@ -167,6 +192,8 @@ export function JerseyStudioEmbed() {
                     }),
                     previewUrl: uploaded,
                     studio: "jersey",
+                    designSummary: incomingSummary,
+                    designState: incomingState,
                   },
                 };
               }
@@ -178,6 +205,29 @@ export function JerseyStudioEmbed() {
           if (previewRaw && previewRaw.startsWith("http")) {
             line = { ...line, image: previewRaw };
           }
+        }
+
+        if (!line.customization?.designState && incomingState) {
+          line = {
+            ...line,
+            customization: {
+              customizationId:
+                line.customization?.customizationId || `jersey-${Date.now()}`,
+              printAreaId: line.customization?.printAreaId || "jersey",
+              printAreaName: line.customization?.printAreaName || "Jersey",
+              transform: line.customization?.transform || {
+                x: 0,
+                y: 0,
+                width: 1,
+                height: 1,
+                rotation: 0,
+              },
+              ...(line.customization || {}),
+              studio: "jersey",
+              designSummary: incomingSummary,
+              designState: incomingState,
+            },
+          };
         }
 
         const probe = {

@@ -21,6 +21,7 @@ import { CheckoutSteps, type CheckoutStep } from "@/components/checkout/Checkout
 import { OrderSummary } from "@/components/checkout/OrderSummary";
 import type { PaymentChoice } from "@/components/checkout/PaymentMethodPicker";
 import { notify } from "@/lib/notify";
+import { markJerseyStudioCartForClear } from "@/lib/jersey-cart-clear";
 
 /**
  * Checkout controller: details -> review -> confirmation.
@@ -92,6 +93,7 @@ export function CheckoutFlow() {
     (nextDraft: OrderDraft) => {
       setPlaced(nextDraft);
       clearCart({ silent: true });
+      markJerseyStudioCartForClear();
       setPendingPaypal(null);
       setStep("confirmation");
     },
@@ -139,6 +141,7 @@ export function CheckoutFlow() {
         });
         if (!session.url) throw new Error("Stripe checkout URL missing");
         clearCart({ silent: true });
+        markJerseyStudioCartForClear();
         window.location.href = session.url;
         return;
       }

@@ -5,9 +5,13 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { paymentsApi } from "@/lib/api/client";
+import { markJerseyStudioCartForClear } from "@/lib/jersey-cart-clear";
+import { clearCart } from "@/store/features/cart/cartSlice";
+import { useAppDispatch } from "@/store/hooks";
 
 export default function CheckoutSuccessInner() {
   const params = useSearchParams();
+  const dispatch = useAppDispatch();
   const orderId = params.get("orderId") || "";
   const guest = params.get("guest") || "";
   const [paid, setPaid] = useState(false);
@@ -40,6 +44,8 @@ export default function CheckoutSuccessInner() {
         if (status.paid) {
           setPaid(true);
           setLoading(false);
+          dispatch(clearCart());
+          markJerseyStudioCartForClear();
           return;
         }
         attempts += 1;
@@ -62,7 +68,7 @@ export default function CheckoutSuccessInner() {
     return () => {
       cancelled = true;
     };
-  }, [orderId, guest]);
+  }, [orderId, guest, dispatch]);
 
   return (
     <main className="mx-auto max-w-xl px-4 py-16 text-center">
