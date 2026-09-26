@@ -43,12 +43,21 @@ export const placeOrder = createAsyncThunk(
           const fromCatalog =
             catalog.products.find((product) => product.slug === item.slug)?.id || catalog.bySlug[item.slug]?.id;
           const productId = isMongoId(item.productId) ? item.productId : isMongoId(fromCatalog) ? fromCatalog : "";
+          const custom = Boolean(item.customizable || item.customization);
+          const preview =
+            item.customization?.previewUrl ||
+            item.image ||
+            item.customization?.previewDataUrl ||
+            "";
           return {
             productId,
             slug: item.slug,
             quantity: item.quantity,
             size: item.size,
-            custom: Boolean(item.customizable || item.customization),
+            custom,
+            customImage: custom ? preview : "",
+            customImages: custom && preview ? [preview] : [],
+            customization: item.customization || null,
           };
         })
         .filter((item) => item.productId || item.slug);

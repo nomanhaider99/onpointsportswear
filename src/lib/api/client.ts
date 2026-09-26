@@ -230,7 +230,7 @@ export const cartApi = {
 
 export const ordersApi = {
   quote: (body: Record<string, unknown>) =>
-    api<Record<string, unknown>>("/orders/quote", { method: "POST", body, token: "" }),
+    api<Record<string, unknown>>("/orders/quote", { method: "POST", body }),
   create: (body: Record<string, unknown>) =>
     api<{
       _id?: string;
@@ -242,7 +242,6 @@ export const ordersApi = {
     }>("/orders/", {
       method: "POST",
       body,
-      token: "",
     }),
   mine: () => api<unknown[]>("/orders/mine"),
   get: (id: string) => api<Record<string, unknown>>(`/orders/${id}`),

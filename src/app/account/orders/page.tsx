@@ -11,8 +11,11 @@ type OrderRow = {
   _id?: string;
   id?: string;
   orderNumber?: string;
+  trackingId?: string;
   status?: string;
   total?: number;
+  totalPrice?: number;
+  grand_total?: number;
   createdAt?: string;
   items?: unknown[];
 };
@@ -88,6 +91,7 @@ export default function AccountOrdersPage() {
           {items.map((order) => {
             const id = String(order._id || order.id || "");
             const when = order.createdAt ? new Date(order.createdAt).toLocaleDateString() : "";
+            const amount = Number(order.grand_total ?? order.totalPrice ?? order.total ?? 0);
             return (
               <li
                 key={id}
@@ -95,16 +99,14 @@ export default function AccountOrdersPage() {
               >
                 <div>
                   <p className="font-semibold text-white">
-                    {order.orderNumber || `Order ${id.slice(-6)}`}
+                    {order.orderNumber || order.trackingId || `Order ${id.slice(-6).toUpperCase()}`}
                   </p>
                   <p className="text-xs text-white/50">
                     {when}
                     {order.status ? ` · ${order.status}` : ""}
                   </p>
                 </div>
-                <p className="text-sm font-bold text-primary">
-                  {formatPrice(Number(order.total || 0))}
-                </p>
+                <p className="text-sm font-bold text-primary">{formatPrice(amount)}</p>
               </li>
             );
           })}
