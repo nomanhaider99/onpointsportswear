@@ -257,7 +257,7 @@ export const paymentsApi = {
       paypalClientId: string;
       paypalMode: string;
       currency: string;
-    }>("/payments/config", { token: "" }),
+    }>("/payments/config"),
   stripeCheckoutSession: (body: {
     orderId: string;
     guestToken?: string;
@@ -266,7 +266,7 @@ export const paymentsApi = {
   }) =>
     api<{ url: string; sessionId: string; orderId: string; guestToken?: string }>(
       "/payments/stripe/checkout-session",
-      { method: "POST", body, token: "" },
+      { method: "POST", body },
     ),
   paypalCreate: (body: {
     orderId: string;
@@ -276,20 +276,18 @@ export const paymentsApi = {
   }) =>
     api<{ paypalOrderId: string; approveUrl: string; orderId: string; guestToken?: string }>(
       "/payments/paypal/create",
-      { method: "POST", body, token: "" },
+      { method: "POST", body },
     ),
   paypalCapture: (body: { orderId: string; guestToken?: string; paypalOrderId?: string }) =>
     api<{ paid: boolean; order: Record<string, unknown> }>("/payments/paypal/capture", {
       method: "POST",
       body,
-      token: "",
     }),
   stripeSyncSession: (body: { orderId: string; guestToken?: string }) =>
-    api<{ paid: boolean }>("/payments/stripe/sync-session", { method: "POST", body, token: "" }),
+    api<{ paid: boolean }>("/payments/stripe/sync-session", { method: "POST", body }),
   status: (orderId: string, guestToken = "") =>
     api<{ paid: boolean; paymentStatus: string; status: string; trackingId?: string }>(
       `/payments/status/${orderId}${guestToken ? `?guest=${encodeURIComponent(guestToken)}` : ""}`,
-      { token: "" },
     ),
 };
 

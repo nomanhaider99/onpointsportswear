@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { isCustomizable } from "@/data/customizer";
 import type { Product } from "@/data/products";
 import type { CartItemCustomization } from "@/lib/customization";
@@ -75,12 +75,47 @@ export interface AddItemResult {
   reason?: string;
 }
 
+function cartSignature(items: CartItem[]) {
+  return items.map((item) => `${item.key}:${item.quantity}`).join("|");
+}
+
 export function useCart() {
   const dispatch = useAppDispatch();
   const currentItems = useAppSelector((state) => state.cart.items);
   const couponCode = useAppSelector((state) => state.cart.couponCode);
   const couponDiscount = useAppSelector((state) => state.cart.couponDiscount);
   const catalog = useAppSelector((state) => state.catalog.products);
+  const requoteToken = useRef(0);
+  const itemsSignature = cartSignature(currentItems);
+
+  // Keep promo discount in sync when qty / lines change (same as app server cart).
+  useEffect(() => {
+    if (!couponCode || !currentItems.length) return;
+    const token = ++requoteToken.current;
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        try {
+          const quote = await ordersApi.quote({
+            items: cartItemsForQuote(currentItems),
+            couponCode,
+          });
+          if (token !== requoteToken.current) return;
+          const discount = Number(quote.discount_total ?? quote.couponDiscount ?? 0) || 0;
+          const applied = String(quote.couponCode || "").toUpperCase();
+          if (!applied) {
+            dispatch(clearCartCoupon());
+            return;
+          }
+          if (applied !== couponCode || discount !== couponDiscount) {
+            dispatch(setCartCoupon({ code: applied, discount }));
+          }
+        } catch {
+          /* keep existing coupon on transient quote errors */
+        }
+      })();
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [itemsSignature, couponCode, couponDiscount, currentItems, dispatch]);
 
   const addItem = useCallback(
     (
@@ -146,7 +181,7 @@ export function useCart() {
       });
       const discount = Number(quote.discount_total ?? quote.couponDiscount ?? 0) || 0;
       const applied = String(quote.couponCode || trimmed).toUpperCase();
-      if (!applied || discount <= 0) {
+      if (!quote.couponCode && discount <= 0) {
         throw new Error("This coupon does not apply to your cart");
       }
       dispatch(setCartCoupon({ code: applied, discount }));

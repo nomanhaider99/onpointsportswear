@@ -163,39 +163,64 @@ const cartSlice = createSlice({
     /** Jersey studio / iframe handoff — merge a ready-made cart line. */
     upsertStudioCartItem(state, action: PayloadAction<CartItem>) {
       const incoming = action.payload;
+      const customizationId =
+        incoming.customization?.customizationId ||
+        `jersey-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+      const key =
+        incoming.key ||
+        `${incoming.slug}::${incoming.size || "OS"}::${customizationId}`;
+      const line: CartItem = {
+        ...incoming,
+        key,
+        customizable: true,
+        customization: {
+          customizationId,
+          printAreaId: incoming.customization?.printAreaId || "jersey",
+          printAreaName: incoming.customization?.printAreaName || "Jersey",
+          transform: incoming.customization?.transform || {
+            x: 0,
+            y: 0,
+            width: 1,
+            height: 1,
+            rotation: 0,
+          },
+          ...(incoming.customization || {}),
+          customizationId,
+          studio: "jersey",
+        },
+        image:
+          mediaUrl(incoming.image) ||
+          incoming.image ||
+          mediaUrl(incoming.customization?.previewUrl) ||
+          incoming.customization?.previewUrl ||
+          mediaUrl(incoming.catalogImage) ||
+          incoming.catalogImage ||
+          "",
+      };
       const issue = getAddToCartIssue(
         {
-          id: incoming.productId || incoming.slug,
-          slug: incoming.slug,
-          name: incoming.name,
+          id: line.productId || line.slug,
+          slug: line.slug,
+          name: line.name,
           category: "Jerseys",
-          priceMin: incoming.price,
-          priceMax: incoming.price,
-          image: incoming.image,
-          sizes: [{ label: incoming.size, price: incoming.price }],
+          priceMin: line.price,
+          priceMax: line.price,
+          image: line.image,
+          sizes: [{ label: line.size, price: line.price }],
           customizable: true,
           featured: false,
         } as Product,
         state.items,
-        Boolean(incoming.customization),
+        true,
       );
       if (issue) return;
-      const existing = state.items.find((item) => item.key === incoming.key);
+      const existing = state.items.find((item) => item.key === line.key);
       if (existing) {
-        existing.quantity += incoming.quantity || 1;
+        existing.quantity += line.quantity || 1;
+        if (line.image) existing.image = line.image;
+        if (line.customization) existing.customization = line.customization;
       } else {
-        state.items.push({
-          ...incoming,
-          image:
-            mediaUrl(incoming.image) ||
-            incoming.image ||
-            mediaUrl(incoming.customization?.previewUrl) ||
-            incoming.customization?.previewUrl ||
-            mediaUrl(incoming.catalogImage) ||
-            incoming.catalogImage ||
-            "",
-          customizable: true,
-        });
+        state.items.push(line);
       }
       persist(state.items);
     },

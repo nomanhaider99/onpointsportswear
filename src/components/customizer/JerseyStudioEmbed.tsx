@@ -5,9 +5,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { JERSEY_STUDIO_URL } from "@/lib/config";
 import { designsApi, getStoredToken, uploadCustomPreview } from "@/lib/api/client";
 import { notify } from "@/lib/notify";
+import { getAddToCartIssue } from "@/lib/cart";
 import { removeCartItem, upsertStudioCartItem } from "@/store/features/cart/cartSlice";
-import { useAppDispatch } from "@/store/hooks";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import type { CartItem } from "@/lib/cart";
+import type { Product } from "@/data/products";
 
 const STUDIO_ORIGIN = JERSEY_STUDIO_URL;
 
@@ -54,6 +56,7 @@ export function JerseyStudioEmbed() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const dispatch = useAppDispatch();
+  const cartItems = useAppSelector((state) => state.cart.items);
   const [ready, setReady] = useState(false);
   const [blocked, setBlocked] = useState(false);
 
@@ -176,6 +179,25 @@ export function JerseyStudioEmbed() {
             line = { ...line, image: previewRaw };
           }
         }
+
+        const probe = {
+          id: line.productId || line.slug,
+          slug: line.slug,
+          name: line.name,
+          category: "Jerseys",
+          priceMin: line.price,
+          priceMax: line.price,
+          image: line.image,
+          sizes: [{ label: line.size, price: line.price }],
+          customizable: true,
+          featured: false,
+        } as Product;
+        const issue = getAddToCartIssue(probe, cartItems, true);
+        if (issue) {
+          notify.error(issue);
+          return;
+        }
+
         dispatch(upsertStudioCartItem(line));
         notify.success("Design added to cart");
         return;
@@ -194,7 +216,7 @@ export function JerseyStudioEmbed() {
     window.addEventListener("message", onMessage);
     setReady(true);
     return () => window.removeEventListener("message", onMessage);
-  }, [dispatch, router, searchParams]);
+  }, [cartItems, dispatch, router, searchParams]);
 
   if (blocked) {
     return (

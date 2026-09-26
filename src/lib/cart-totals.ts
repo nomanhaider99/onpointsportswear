@@ -64,13 +64,18 @@ export function computeCartTotals({
 }
 
 export function cartItemsForQuote(items: CartItem[]) {
-  return items.map((item) => ({
-    productId: item.productId,
-    slug: item.slug,
-    quantity: item.quantity,
-    size: item.size,
-    custom: Boolean(item.customizable || item.customization),
-    customImage: item.image?.startsWith("http") ? item.image : "",
-    customization: item.customization || null,
-  }));
+  return items.map((item) => {
+    const preview = String(item.customization?.previewUrl || item.image || "").trim();
+    const customImage =
+      preview && !/^(data:|blob:)/i.test(preview) ? preview : "";
+    return {
+      productId: item.productId,
+      slug: item.slug,
+      quantity: item.quantity,
+      size: item.size,
+      custom: Boolean(item.customizable || item.customization),
+      customImage,
+      customization: item.customization || null,
+    };
+  });
 }
