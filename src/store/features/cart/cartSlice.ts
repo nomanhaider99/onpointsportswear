@@ -141,6 +141,8 @@ const cartSlice = createSlice({
           image:
             mediaUrl(incoming.image) ||
             incoming.image ||
+            mediaUrl(incoming.customization?.previewUrl) ||
+            incoming.customization?.previewUrl ||
             mediaUrl(incoming.catalogImage) ||
             incoming.catalogImage ||
             "",

@@ -18,6 +18,7 @@ export function CartItemThumb({
 }) {
   const src =
     (item.image && item.image.trim()) ||
+    item.customization?.previewUrl ||
     item.customization?.previewDataUrl ||
     item.catalogImage ||
     catalogImage ||

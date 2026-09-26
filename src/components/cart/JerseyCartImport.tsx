@@ -34,7 +34,22 @@ export function JerseyCartImport() {
       const parsed = decodeImportPayload(raw);
       if (!Array.isArray(parsed) || parsed.length === 0) return;
       for (const item of parsed) {
-        if (item?.key && item?.slug) dispatch(upsertStudioCartItem(item));
+        if (!item?.key || !item?.slug) continue;
+        const preview =
+          (typeof item.image === "string" && item.image.startsWith("http") && item.image) ||
+          (typeof item.customization?.previewUrl === "string" &&
+            item.customization.previewUrl.startsWith("http") &&
+            item.customization.previewUrl) ||
+          "";
+        dispatch(
+          upsertStudioCartItem({
+            ...item,
+            image: preview || item.image || "",
+            customization: item.customization
+              ? { ...item.customization, previewUrl: preview || item.customization.previewUrl }
+              : item.customization,
+          }),
+        );
       }
       notify.success("Jersey designs imported into your cart");
       router.replace("/cart");
