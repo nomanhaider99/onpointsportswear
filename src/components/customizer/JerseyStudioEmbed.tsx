@@ -32,7 +32,7 @@ async function persistStudioDesign(data: StudioMessage) {
     previewUrl = await uploadCustomPreview(previewRaw);
   }
   const productId = data.product?.id || data.product?._id || data.cartItem?.productId || "studio-jersey";
-  return designsApi.create({
+  const body = {
     productId,
     name: data.design?.name || data.product?.name || "Custom Design",
     previewUrl,
@@ -41,7 +41,13 @@ async function persistStudioDesign(data: StudioMessage) {
     designState: data.design?.state || null,
     customization: { studio: "jersey", designId: data.design?.id },
     studio: "jersey",
-  });
+  };
+  const params = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
+  const editingId = params.get("savedDesignId") || params.get("designId") || "";
+  if (editingId && /^[a-fA-F0-9]{24}$/i.test(editingId)) {
+    return designsApi.update(editingId, body);
+  }
+  return designsApi.create(body);
 }
 
 export function JerseyStudioEmbed() {
@@ -49,6 +55,7 @@ export function JerseyStudioEmbed() {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const [ready, setReady] = useState(false);
+  const [blocked, setBlocked] = useState(false);
 
   const iframeSrc = useMemo(() => {
     if (!STUDIO_ORIGIN) return "";
@@ -61,6 +68,14 @@ export function JerseyStudioEmbed() {
   }, [searchParams]);
 
   useEffect(() => {
+    if (!getStoredToken()) {
+      setBlocked(true);
+      notify.info("Sign in to open the customizer");
+      const returnTo = `/customize/jersey${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
+      router.replace(`/account?login=1&returnTo=${encodeURIComponent(returnTo)}`);
+      return undefined;
+    }
+
     async function onMessage(event: MessageEvent) {
       const data = event.data as StudioMessage & { source?: string; reason?: string };
       if (!data || typeof data !== "object" || !data.type) return;
@@ -179,7 +194,15 @@ export function JerseyStudioEmbed() {
     window.addEventListener("message", onMessage);
     setReady(true);
     return () => window.removeEventListener("message", onMessage);
-  }, [dispatch, router]);
+  }, [dispatch, router, searchParams]);
+
+  if (blocked) {
+    return (
+      <div className="flex min-h-svh items-center justify-center bg-[#0b1020] px-6 text-center text-sm text-white/70">
+        Redirecting to sign in…
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-[#0b1020]">

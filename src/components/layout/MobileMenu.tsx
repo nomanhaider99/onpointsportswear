@@ -1,10 +1,15 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { X } from "lucide-react";
 import { mainNav } from "@/data/navigation";
+import { accountLoginHref } from "@/lib/auth-gate";
+import { notify } from "@/lib/notify";
 import { cn } from "@/lib/utils";
+import { logout } from "@/store/features/auth/authSlice";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
 export function MobileMenu({
   open,
@@ -16,6 +21,10 @@ export function MobileMenu({
   pathname: string;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const dispatch = useAppDispatch();
+  const router = useRouter();
+  const { token, user } = useAppSelector((state) => state.auth);
+  const signedIn = Boolean(token);
 
   useEffect(() => {
     if (!open) return;
@@ -73,6 +82,66 @@ export function MobileMenu({
             );
           })}
         </ul>
+
+        <div className="mt-6 border-t border-border pt-4">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-white/45">Account</p>
+          {signedIn ? (
+            <ul className="flex flex-col gap-1">
+              <li className="px-1 py-2 text-sm text-white/70">
+                {user?.name || user?.email || "Signed in"}
+              </li>
+              <li>
+                <Link
+                  href="/account"
+                  onClick={onClose}
+                  className="block py-3 text-base font-semibold uppercase text-[#a6a5a5] hover:text-primary"
+                >
+                  Account home
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/account/designs"
+                  onClick={onClose}
+                  className="block py-3 text-base font-semibold uppercase text-[#a6a5a5] hover:text-primary"
+                >
+                  My Designs
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/account/orders"
+                  onClick={onClose}
+                  className="block py-3 text-base font-semibold uppercase text-[#a6a5a5] hover:text-primary"
+                >
+                  Order History
+                </Link>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    dispatch(logout());
+                    notify.success("Signed out");
+                    router.push("/");
+                  }}
+                  className="block w-full py-3 text-left text-base font-semibold uppercase text-[#ff8f8f]"
+                >
+                  Sign out
+                </button>
+              </li>
+            </ul>
+          ) : (
+            <Link
+              href={accountLoginHref(pathname || "/")}
+              onClick={onClose}
+              className="block py-3 text-base font-semibold uppercase text-primary"
+            >
+              Sign in
+            </Link>
+          )}
+        </div>
       </nav>
     </div>
   );

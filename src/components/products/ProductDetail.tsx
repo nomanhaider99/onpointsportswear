@@ -1,12 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { Sparkles } from "lucide-react";
 import type { Product } from "@/data/products";
+import { CustomizeStudioButton } from "@/components/customizer/CustomizeStudioButton";
 import { getAddToCartIssue, useCart } from "@/lib/cart";
-import { jerseyStudioHref, usesJerseyStudio } from "@/lib/jersey-studio";
+import { usesJerseyStudio } from "@/lib/jersey-studio";
 import { notify } from "@/lib/notify";
 import { formatPrice } from "@/lib/utils";
 
@@ -91,7 +90,9 @@ export function ProductDetail({ product }: { product: Product }) {
         <p className="text-[30px] font-extrabold text-primary">
           {compareAt > 0 ? (
             <>
-              <span className="mr-3 text-lg font-medium text-white/45 line-through">{formatPrice(compareAt)}</span>
+              <span className="mr-3 text-lg font-medium text-white/45 line-through">
+                {formatPrice(compareAt)}
+              </span>
               <span aria-hidden="true">{priceLabel}</span>
             </>
           ) : (
@@ -103,16 +104,13 @@ export function ProductDetail({ product }: { product: Product }) {
           <div className="rounded-lg border border-[var(--color-primary-line)] bg-primary-soft p-5">
             <p className="text-base font-medium text-white">Product customizer</p>
             <p className="mt-1 text-sm text-white/70">
-              Design colors, patterns, logos, names, and socks — then add to cart and checkout like
-              any other custom order.
+              Sign in first (same as the app), then design colors, patterns, logos, names, and socks.
             </p>
-            <Link
-              href={jerseyStudioHref(product, size)}
+            <CustomizeStudioButton
+              product={product}
+              size={size}
               className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-[#029b36]"
-            >
-              <Sparkles size={16} aria-hidden="true" />
-              Customize This Product
-            </Link>
+            />
           </div>
         ) : null}
 
@@ -181,7 +179,7 @@ export function ProductDetail({ product }: { product: Product }) {
             </div>
           ) : (
             <p className="mt-4 text-sm text-white/60">
-              Pick a size, then open Customize. Cart and checkout use the same shop flow and database.
+              Pick a size, then open Customize. You must be signed in — designs save to your account.
             </p>
           )}
         </form>

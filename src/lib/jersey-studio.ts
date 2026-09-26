@@ -16,10 +16,15 @@ export type JerseyStudioOptions = {
   size?: string;
   /** Pass auth token so Save Design stores under this client/user id. */
   token?: string;
+  /** Resume editing a previously saved design for this user. */
+  savedDesignId?: string;
 };
 
 /** Opens the hosted Vite customizer with product context (website checkout path). */
-export function jerseyStudioHref(product: Product, sizeOrOptions?: string | JerseyStudioOptions): string {
+export function jerseyStudioHref(
+  product: Product,
+  sizeOrOptions?: string | JerseyStudioOptions,
+): string {
   const options: JerseyStudioOptions =
     typeof sizeOrOptions === "string" || sizeOrOptions == null
       ? { size: sizeOrOptions }
@@ -44,6 +49,41 @@ export function jerseyStudioHref(product: Product, sizeOrOptions?: string | Jers
       : typeof window !== "undefined"
         ? getStoredToken()
         : "";
+  if (token) params.set("token", token);
+  if (options.savedDesignId) params.set("savedDesignId", options.savedDesignId);
+  return `${STUDIO_BASE}/?${params.toString()}`;
+}
+
+/** Edit an existing account design in the customizer (resumes saved step/state). */
+export function editSavedDesignHref(design: {
+  _id?: string;
+  id?: string;
+  product?: { _id?: string; id?: string; slug?: string; name?: string; thumbnail?: string; images?: string[] };
+  productId?: string;
+  name?: string;
+  size?: string;
+  price?: number;
+  previewUrl?: string;
+}): string {
+  const id = String(design._id || design.id || "");
+  const productId = String(
+    design.product?._id || design.product?.id || design.productId || "studio-jersey",
+  );
+  const params = new URLSearchParams({
+    productId,
+    slug: design.product?.slug || productId,
+    name: design.name || design.product?.name || "Custom Design",
+    image:
+      design.previewUrl ||
+      design.product?.thumbnail ||
+      design.product?.images?.[0] ||
+      "",
+    embed: "web",
+  });
+  if (design.size) params.set("size", String(design.size));
+  if (design.price) params.set("price", String(design.price));
+  if (id) params.set("savedDesignId", id);
+  const token = typeof window !== "undefined" ? getStoredToken() : "";
   if (token) params.set("token", token);
   return `${STUDIO_BASE}/?${params.toString()}`;
 }

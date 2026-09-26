@@ -1,10 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import type { Product } from "@/data/products";
+import { CustomizeStudioButton } from "@/components/customizer/CustomizeStudioButton";
 import { useCart } from "@/lib/cart";
-import { jerseyStudioHref } from "@/lib/jersey-studio";
 
 /**
  * Archive-card add-to-cart. The source adds the default (smallest) variation
@@ -30,10 +29,10 @@ export function AddToCartButton({ product }: { product: Product }) {
 
   if (product.customizable) {
     return (
-      <Link href={jerseyStudioHref(product)} className={buttonClass}>
+      <CustomizeStudioButton product={product} className={buttonClass}>
         Customize
         <span className="sr-only"> {product.name}</span>
-      </Link>
+      </CustomizeStudioButton>
     );
   }
 

@@ -9,6 +9,7 @@ import { mainNav } from "@/data/navigation";
 import { useCart } from "@/lib/cart";
 import { formatPrice } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import { AccountMenu } from "./AccountMenu";
 import { CartIcon } from "./CartIcon";
 import { CartDrawer } from "./CartDrawer";
 import { MobileMenu } from "./MobileMenu";
@@ -64,38 +65,40 @@ export function Header() {
           </ul>
         </nav>
 
-        {/* Mobile order matches the source: logo, menu toggle, cart. */}
-        <button
-          type="button"
-          onClick={() => setMenuOpen(true)}
-          aria-label="Open menu"
-          aria-expanded={menuOpen}
-          aria-controls="mobile-menu"
-          className="rounded p-1 text-white transition-colors hover:text-primary lg:hidden"
-        >
-          <Menu size={28} aria-hidden="true" />
-        </button>
+        <div className="flex items-center gap-1 sm:gap-2">
+          <button
+            type="button"
+            onClick={() => setMenuOpen(true)}
+            aria-label="Open menu"
+            aria-expanded={menuOpen}
+            aria-controls="mobile-menu"
+            className="rounded p-1 text-white transition-colors hover:text-primary lg:hidden"
+          >
+            <Menu size={28} aria-hidden="true" />
+          </button>
 
-        <button
-          type="button"
-          onClick={() => setCartOpen(true)}
-          aria-label={`Open cart, ${count} item${count === 1 ? "" : "s"}, subtotal ${formatPrice(subtotal)}`}
-          aria-expanded={cartOpen}
-          className="rounded border border-transparent py-3 pl-3 pr-4 text-white transition-colors lg:pl-6"
-        >
-          {/* The source keeps the subtotal in the DOM but hides it visually. */}
-          <span className="sr-only">{formatPrice(subtotal)}</span>
-          <span className="relative inline-flex items-center transition-colors hover:text-primary">
-            <span
-              className="absolute -right-[0.7em] -top-[0.7em] flex h-[1.6em] min-w-[1.6em] items-center justify-center rounded-full bg-[#d9534f] text-[10px] leading-[1.5em] text-white"
-              aria-hidden="true"
-            >
-              {count}
+          <AccountMenu />
+
+          <button
+            type="button"
+            onClick={() => setCartOpen(true)}
+            aria-label={`Open cart, ${count} item${count === 1 ? "" : "s"}, subtotal ${formatPrice(subtotal)}`}
+            aria-expanded={cartOpen}
+            className="rounded border border-transparent py-3 pl-2 pr-3 text-white transition-colors sm:pl-3 sm:pr-4"
+          >
+            <span className="sr-only">{formatPrice(subtotal)}</span>
+            <span className="relative inline-flex items-center transition-colors hover:text-primary">
+              <span
+                className="absolute -right-[0.7em] -top-[0.7em] flex h-[1.6em] min-w-[1.6em] items-center justify-center rounded-full bg-[#d9534f] text-[10px] leading-[1.5em] text-white"
+                aria-hidden="true"
+              >
+                {count}
+              </span>
+              <CartIcon />
+              <span className="sr-only">Cart</span>
             </span>
-            <CartIcon />
-            <span className="sr-only">Cart</span>
-          </span>
-        </button>
+          </button>
+        </div>
       </div>
 
       <MobileMenu open={menuOpen} onClose={() => setMenuOpen(false)} pathname={pathname} />

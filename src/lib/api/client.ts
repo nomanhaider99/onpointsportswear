@@ -287,8 +287,12 @@ export const contactApi = {
 
 export const designsApi = {
   list: () => api<{ designs: Record<string, unknown>[] }>("/designs"),
+  get: (id: string) => api<Record<string, unknown>>(`/designs/${id}`),
   create: (body: Record<string, unknown>) =>
     api<Record<string, unknown>>("/designs", { method: "POST", body }),
+  update: (id: string, body: Record<string, unknown>) =>
+    api<Record<string, unknown>>(`/designs/${id}`, { method: "PUT", body }),
+  remove: (id: string) => api<{ message?: string }>(`/designs/${id}`, { method: "DELETE" }),
 };
 
 /** Upload a data-URL or remote image as a custom design preview. */

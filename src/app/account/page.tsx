@@ -6,11 +6,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { authApi, getStoredToken, setStoredToken } from "@/lib/api/client";
 import { JERSEY_STUDIO_URL } from "@/lib/config";
 import { notify } from "@/lib/notify";
-import { useAppDispatch } from "@/store/hooks";
-import { bootstrapAuth } from "@/store/features/auth/authSlice";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { bootstrapAuth, logout } from "@/store/features/auth/authSlice";
 
 function resolveReturnTarget(raw: string, token: string) {
-  if (!raw) return { type: "internal" as const, href: "/cart" };
+  if (!raw) return { type: "internal" as const, href: "/account" };
   if (raw.startsWith("/")) return { type: "internal" as const, href: raw };
 
   try {
@@ -25,7 +25,10 @@ function resolveReturnTarget(raw: string, token: string) {
     }
 
     if (shopOrigin && target.origin === shopOrigin) {
-      return { type: "internal" as const, href: `${target.pathname}${target.search}${target.hash}` };
+      return {
+        type: "internal" as const,
+        href: `${target.pathname}${target.search}${target.hash}`,
+      };
     }
     if (studioHost && target.origin === studioHost) {
       if (token) target.searchParams.set("token", token);
@@ -35,19 +38,94 @@ function resolveReturnTarget(raw: string, token: string) {
   } catch {
     /* fall through */
   }
-  return { type: "internal" as const, href: "/cart" };
+  return { type: "internal" as const, href: "/account" };
 }
 
-function AccountLoginInner() {
+function AccountHub() {
+  const dispatch = useAppDispatch();
+  const router = useRouter();
+  const { user } = useAppSelector((state) => state.auth);
+  const searchParams = useSearchParams();
+  const returnRaw = searchParams.get("returnTo") || "";
+
+  const continueDest = useMemo(() => {
+    if (!returnRaw) return null;
+    return resolveReturnTarget(returnRaw, getStoredToken());
+  }, [returnRaw]);
+
+  return (
+    <div className="mx-auto max-w-lg px-4 py-16">
+      <h1 className="text-2xl font-semibold text-white">Account</h1>
+      <p className="mt-1 text-sm text-white/70">
+        Signed in as {user?.name || user?.email || "member"} — same account as the app.
+      </p>
+
+      {continueDest ? (
+        <button
+          type="button"
+          onClick={() => {
+            if (continueDest.type === "external") window.location.href = continueDest.href;
+            else router.push(continueDest.href);
+          }}
+          className="mt-6 w-full rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground"
+        >
+          Continue to customizer
+        </button>
+      ) : null}
+
+      <ul className="mt-8 divide-y divide-white/10 overflow-hidden rounded-lg border border-white/10">
+        <li>
+          <Link
+            href="/account/designs"
+            className="block px-4 py-3.5 text-sm font-medium text-white hover:bg-white/5 hover:text-primary"
+          >
+            My Designs
+          </Link>
+        </li>
+        <li>
+          <Link
+            href="/account/orders"
+            className="block px-4 py-3.5 text-sm font-medium text-white hover:bg-white/5 hover:text-primary"
+          >
+            Order History
+          </Link>
+        </li>
+        <li>
+          <Link
+            href="/cart"
+            className="block px-4 py-3.5 text-sm font-medium text-white hover:bg-white/5 hover:text-primary"
+          >
+            Cart &amp; checkout
+          </Link>
+        </li>
+        <li>
+          <button
+            type="button"
+            onClick={() => {
+              dispatch(logout());
+              notify.success("Signed out");
+              router.push("/");
+            }}
+            className="block w-full px-4 py-3.5 text-left text-sm font-medium text-[#ff8f8f] hover:bg-white/5"
+          >
+            Sign out
+          </button>
+        </li>
+      </ul>
+    </div>
+  );
+}
+
+function AccountAuthForms() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const dispatch = useAppDispatch();
+  const [mode, setMode] = useState<"login" | "register">("login");
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
-  const returnRaw = searchParams.get("returnTo") || "/cart";
-
-  const alreadyIn = Boolean(getStoredToken());
+  const returnRaw = searchParams.get("returnTo") || "/account";
 
   async function finishLogin(token: string) {
     const dest = resolveReturnTarget(returnRaw, token);
@@ -63,52 +141,79 @@ function AccountLoginInner() {
     if (busy) return;
     setBusy(true);
     try {
-      const data = await authApi.login(email.trim(), password);
-      if (data.token) setStoredToken(data.token);
-      await dispatch(bootstrapAuth());
-      notify.success("Signed in");
-      await finishLogin(data.token || getStoredToken());
+      if (mode === "login") {
+        const data = await authApi.login(email.trim(), password);
+        if (data.token) setStoredToken(data.token);
+        await dispatch(bootstrapAuth());
+        notify.success("Signed in");
+        await finishLogin(data.token || getStoredToken());
+      } else {
+        const data = await authApi.register({
+          name: name.trim(),
+          email: email.trim(),
+          password,
+        });
+        if (data.token) {
+          setStoredToken(data.token);
+          await dispatch(bootstrapAuth());
+          notify.success("Account created");
+          await finishLogin(data.token);
+        } else {
+          notify.success(data.message || "Check your email to finish signup");
+          setMode("login");
+        }
+      }
     } catch (error) {
-      notify.error(error instanceof Error ? error.message : "Could not sign in");
+      notify.error(error instanceof Error ? error.message : "Could not continue");
     } finally {
       setBusy(false);
     }
   }
 
-  const continueHref = useMemo(() => {
-    const token = getStoredToken();
-    return resolveReturnTarget(returnRaw, token).href;
-  }, [returnRaw]);
-
-  if (alreadyIn) {
-    return (
-      <div className="mx-auto max-w-md px-4 py-16 text-center">
-        <h1 className="text-2xl font-semibold text-white">You are signed in</h1>
-        <p className="mt-2 text-sm text-white/70">
-          Your designs save to this account on the website and in the app.
-        </p>
-        <button
-          type="button"
-          onClick={() => finishLogin(getStoredToken())}
-          className="mt-6 inline-flex rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground"
-        >
-          Continue
-        </button>
-        <p className="mt-3 text-xs text-white/40">
-          Or go to <Link href="/cart" className="underline">cart</Link>
-          {continueHref.startsWith("http") ? null : null}
-        </p>
-      </div>
-    );
-  }
-
   return (
     <div className="mx-auto max-w-md px-4 py-16">
-      <h1 className="text-2xl font-semibold text-white">Sign in</h1>
+      <h1 className="text-2xl font-semibold text-white">
+        {mode === "login" ? "Sign in" : "Create account"}
+      </h1>
       <p className="mt-2 text-sm text-white/70">
-        Sign in to save jersey designs to your client account, then checkout on the website.
+        Same account as the app — save designs, edit later, and checkout on the website.
       </p>
-      <form onSubmit={onSubmit} className="mt-8 flex flex-col gap-4">
+
+      <div className="mt-6 flex gap-2">
+        <button
+          type="button"
+          onClick={() => setMode("login")}
+          className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold ${
+            mode === "login" ? "bg-primary text-primary-foreground" : "bg-white/5 text-white/70"
+          }`}
+        >
+          Sign in
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode("register")}
+          className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold ${
+            mode === "register" ? "bg-primary text-primary-foreground" : "bg-white/5 text-white/70"
+          }`}
+        >
+          Register
+        </button>
+      </div>
+
+      <form onSubmit={onSubmit} className="mt-6 flex flex-col gap-4">
+        {mode === "register" ? (
+          <label className="flex flex-col gap-1.5 text-sm text-white/80">
+            Name
+            <input
+              type="text"
+              required
+              autoComplete="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-white outline-none focus:border-primary"
+            />
+          </label>
+        ) : null}
         <label className="flex flex-col gap-1.5 text-sm text-white/80">
           Email
           <input
@@ -125,7 +230,8 @@ function AccountLoginInner() {
           <input
             type="password"
             required
-            autoComplete="current-password"
+            minLength={6}
+            autoComplete={mode === "login" ? "current-password" : "new-password"}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-white outline-none focus:border-primary"
@@ -136,21 +242,25 @@ function AccountLoginInner() {
           disabled={busy}
           className="rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
         >
-          {busy ? "Signing in…" : "Sign in"}
+          {busy ? "Please wait…" : mode === "login" ? "Sign in" : "Create account"}
         </button>
       </form>
     </div>
   );
 }
 
+function AccountPageInner() {
+  const { token } = useAppSelector((state) => state.auth);
+  const signedIn = Boolean(token || getStoredToken());
+  return signedIn ? <AccountHub /> : <AccountAuthForms />;
+}
+
 export default function AccountPage() {
   return (
     <Suspense
-      fallback={
-        <div className="px-4 py-16 text-center text-sm text-white/70">Loading…</div>
-      }
+      fallback={<div className="px-4 py-16 text-center text-sm text-white/70">Loading…</div>}
     >
-      <AccountLoginInner />
+      <AccountPageInner />
     </Suspense>
   );
 }
