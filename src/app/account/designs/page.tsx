@@ -17,6 +17,15 @@ type SavedDesignRow = {
   price?: number;
   updatedAt?: string;
   createdAt?: string;
+  designState?: {
+    rosterPlayers?: Array<{
+      name?: string;
+      number?: string;
+      size?: string;
+      captain?: boolean;
+      alternate?: boolean;
+    }>;
+  } | null;
   product?: {
     _id?: string;
     id?: string;
@@ -26,6 +35,21 @@ type SavedDesignRow = {
     images?: string[];
   };
 };
+
+function rosterLine(item: SavedDesignRow) {
+  const players = Array.isArray(item.designState?.rosterPlayers)
+    ? item.designState.rosterPlayers
+    : [];
+  if (!players.length) return "";
+  return players
+    .map((p) => {
+      const role = p.captain ? "Captain" : p.alternate ? "Alternate" : "";
+      return [p.name || "Player", p.number ? `#${p.number}` : "", p.size, role]
+        .filter(Boolean)
+        .join(" ");
+    })
+    .join(" · ");
+}
 
 function formatSaved(value?: string) {
   if (!value) return "Saved recently";
@@ -153,6 +177,9 @@ export default function MyDesignsPage() {
                     {formatPrice(Number(item.price || 0))}
                     {item.size ? ` · ${item.size}` : ""}
                   </p>
+                  {rosterLine(item) ? (
+                    <p className="text-xs leading-5 text-white/55">{rosterLine(item)}</p>
+                  ) : null}
                   <a
                     href={href}
                     className="mt-2 inline-flex w-full items-center justify-center rounded-lg border border-primary px-4 py-2 text-sm font-semibold text-primary hover:bg-primary hover:text-primary-foreground"
