@@ -1,13 +1,18 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Product } from "@/data/products";
 import { CustomizeStudioButton } from "@/components/customizer/CustomizeStudioButton";
 import { getAddToCartIssue, useCart } from "@/lib/cart";
 import { usesJerseyStudio } from "@/lib/jersey-studio";
 import { notify } from "@/lib/notify";
 import { formatPrice } from "@/lib/utils";
+import {
+  DEFAULT_PRODUCT_SIZE,
+  groupSelectedSizes,
+  shortSizeLabel,
+} from "@/data/productSizes";
 
 export function ProductDetail({ product }: { product: Product }) {
   const { addItem, items } = useCart();
@@ -15,13 +20,40 @@ export function ProductDetail({ product }: { product: Product }) {
   const [quantity, setQuantity] = useState(1);
   const [error, setError] = useState("");
   const [added, setAdded] = useState(false);
+  const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
   const timeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const openStudio = usesJerseyStudio(product);
+  const sizeChart = product.sizeChart?.image ? product.sizeChart : null;
+  const sizeLabels = useMemo(() => product.sizes.map((entry) => entry.label), [product.sizes]);
+  const sizeGroups = useMemo(() => groupSelectedSizes(sizeLabels), [sizeLabels]);
+  const ungroupedSizes = useMemo(() => {
+    const grouped = new Set(sizeGroups.flatMap((group) => group.selected));
+    return product.sizes.filter((entry) => !grouped.has(entry.label));
+  }, [product.sizes, sizeGroups]);
 
   useEffect(() => {
-    setSize(product.sizes[0]?.label || "");
+    const preferred =
+      product.sizes.find((entry) => entry.label === DEFAULT_PRODUCT_SIZE)?.label ||
+      product.sizes[0]?.label ||
+      "";
+    setSize(preferred);
     setError("");
-  }, [product.id]);
+    setSizeGuideOpen(false);
+  }, [product.id, product.sizes]);
+
+  useEffect(() => {
+    if (!sizeGuideOpen) return undefined;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setSizeGuideOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [sizeGuideOpen]);
 
   const blockedReason = openStudio
     ? "Open the customizer to design and add this product to your cart."
@@ -116,28 +148,73 @@ export function ProductDetail({ product }: { product: Product }) {
 
         <form onSubmit={onSubmit}>
           <div className="flex flex-col gap-3 rounded-lg bg-white/[0.04] p-5">
-            <p className="text-xl font-medium text-white">Size</p>
-            <div className="flex flex-wrap gap-2" role="group" aria-label="Size">
-              {product.sizes.map((entry) => {
-                const active = entry.label === size;
-                return (
-                  <button
-                    key={entry.label}
-                    type="button"
-                    onClick={() => {
-                      setSize(entry.label);
-                      setError("");
-                    }}
-                    className={`min-w-12 rounded-lg border px-4 py-2.5 text-base font-semibold transition-colors ${
-                      active
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-white/20 bg-transparent text-white hover:border-primary"
-                    }`}
-                  >
-                    {entry.label}
-                  </button>
-                );
-              })}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xl font-medium text-white">Size</p>
+              {sizeChart ? (
+                <button
+                  type="button"
+                  onClick={() => setSizeGuideOpen(true)}
+                  className="text-sm font-semibold text-primary underline-offset-2 hover:underline"
+                >
+                  Size guide
+                </button>
+              ) : null}
+            </div>
+            <div className="flex flex-col gap-4" role="group" aria-label="Size">
+              {sizeGroups.map((group) => (
+                <div key={group.id} className="flex flex-col gap-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-white/55">
+                    {group.label}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {group.selected.map((code) => {
+                      const active = code === size;
+                      return (
+                        <button
+                          key={code}
+                          type="button"
+                          title={code}
+                          onClick={() => {
+                            setSize(code);
+                            setError("");
+                          }}
+                          className={`min-w-12 rounded-lg border px-4 py-2.5 text-base font-semibold transition-colors ${
+                            active
+                              ? "border-primary bg-primary text-primary-foreground"
+                              : "border-white/20 bg-transparent text-white hover:border-primary"
+                          }`}
+                        >
+                          {shortSizeLabel(code)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+              {ungroupedSizes.length ? (
+                <div className="flex flex-wrap gap-2">
+                  {ungroupedSizes.map((entry) => {
+                    const active = entry.label === size;
+                    return (
+                      <button
+                        key={entry.label}
+                        type="button"
+                        onClick={() => {
+                          setSize(entry.label);
+                          setError("");
+                        }}
+                        className={`min-w-12 rounded-lg border px-4 py-2.5 text-base font-semibold transition-colors ${
+                          active
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-white/20 bg-transparent text-white hover:border-primary"
+                        }`}
+                      >
+                        {entry.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
             </div>
           </div>
 
@@ -184,6 +261,49 @@ export function ProductDetail({ product }: { product: Product }) {
           )}
         </form>
       </div>
+
+      {sizeGuideOpen && sizeChart ? (
+        <div
+          className="fixed inset-0 z-[80] flex items-center justify-center bg-black/75 p-4"
+          role="presentation"
+          onClick={() => setSizeGuideOpen(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="size-guide-title"
+            className="relative max-h-[90vh] w-full max-w-3xl overflow-auto rounded-xl border border-white/15 bg-[#0f1218] p-4 shadow-2xl sm:p-6"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div>
+                <h2 id="size-guide-title" className="text-xl font-semibold text-white">
+                  {sizeChart.title || "Size guide"}
+                </h2>
+                {sizeChart.description ? (
+                  <p className="mt-1 text-sm text-white/65">{sizeChart.description}</p>
+                ) : null}
+              </div>
+              <button
+                type="button"
+                aria-label="Close size guide"
+                onClick={() => setSizeGuideOpen(false)}
+                className="rounded-lg border border-white/20 px-3 py-1.5 text-sm text-white hover:border-primary"
+              >
+                Close
+              </button>
+            </div>
+            <div className="relative mx-auto min-h-[200px] w-full">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={sizeChart.image}
+                alt={sizeChart.title || "Size guide"}
+                className="mx-auto h-auto max-h-[70vh] w-full object-contain"
+              />
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

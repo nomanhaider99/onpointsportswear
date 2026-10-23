@@ -39,6 +39,12 @@ export interface Product {
    * config in `@/data/customizer`. See docs/customizer-handoff.md.
    */
   customizer?: ProductCustomizerConfig;
+  /** Category size chart (uploaded in admin). Shown in product size guide modal. */
+  sizeChart?: {
+    title?: string;
+    description?: string;
+    image?: string;
+  } | null;
 }
 
 export const productCategories: Array<"All" | ProductCategory> = [

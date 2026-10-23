@@ -10,6 +10,7 @@ export const mainNav: NavItem[] = [
   { label: "Products", href: "/products" },
   { label: "My Designs", href: "/account/designs" },
   { label: "Gallery", href: "/gallery" },
+  { label: "FAQ", href: "/faq" },
   { label: "Contact", href: "/contact" },
 ];
 
@@ -23,6 +24,7 @@ export const footerServiceLinks: NavItem[] = [
 ];
 
 export const footerLegalLinks: NavItem[] = [
+  { label: "FAQ", href: "/faq" },
   { label: "Privacy Policy", href: "/privacy-policy" },
   { label: "Terms of Service", href: "/terms-of-service" },
 ];

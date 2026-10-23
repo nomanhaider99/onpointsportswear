@@ -1,5 +1,6 @@
 import type { Product, ProductCategory } from "@/data/products";
 import type { ProductCustomizerConfig } from "@/data/customizer";
+import { sizeRank } from "@/data/productSizes";
 import { mediaUrl } from "./client";
 
 export interface ApiCategory {
@@ -35,6 +36,11 @@ export interface ApiProduct {
     isActive?: boolean;
   }>;
   customizer?: ProductCustomizerConfig;
+  sizeChart?: {
+    title?: string;
+    description?: string;
+    image?: string;
+  } | null;
 }
 
 function slugify(value: string) {
@@ -58,14 +64,6 @@ function isCustomizableType(raw: ApiProduct) {
     return raw.category.type === "customizable";
   }
   return false;
-}
-
-const SIZE_ORDER = ["XXS", "XS", "S", "SM", "M", "MD", "L", "LG", "XL", "XXL", "2XL", "XXXL", "3XL", "4XL"];
-
-function sizeRank(label: string) {
-  const key = label.trim().toUpperCase();
-  const index = SIZE_ORDER.indexOf(key);
-  return index === -1 ? 100 + key.charCodeAt(0) : index;
 }
 
 function sizeLabel(value: unknown) {
@@ -132,6 +130,13 @@ export function mapProduct(raw: ApiProduct): Product {
     stock: Number(raw.stock || 0),
     images: (raw.images || []).map((src) => mediaUrl(src)).filter(Boolean),
     customizer: raw.customizer,
+    sizeChart: raw.sizeChart?.image
+      ? {
+          title: raw.sizeChart.title || "Size guide",
+          description: raw.sizeChart.description || "",
+          image: mediaUrl(raw.sizeChart.image),
+        }
+      : null,
   };
 }
 
