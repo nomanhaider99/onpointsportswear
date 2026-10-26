@@ -87,10 +87,17 @@ export function sizeRank(label: string) {
   return upperIndex === -1 ? 1000 + key.charCodeAt(0) : upperIndex;
 }
 
+function matchesSizeGroup(groupId: string, size: string, codes: Set<string>) {
+  if (codes.has(size)) return true;
+  if (groupId === "youth") return /^Youth\s/i.test(size);
+  if (groupId === "adult") return /^(Adult|Women)\s/i.test(size);
+  return false;
+}
+
 export function groupSelectedSizes(sizes: string[]) {
   return PRODUCT_SIZE_GROUPS.map((group) => {
     const codes = new Set(group.sizes.map((row) => row.code));
-    const selected = sizes.filter((size) => codes.has(size));
+    const selected = sizes.filter((size) => matchesSizeGroup(group.id, size, codes));
     return { ...group, selected };
   }).filter((group) => group.selected.length > 0);
 }

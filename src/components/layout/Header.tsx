@@ -7,8 +7,10 @@ import { useState } from "react";
 import { Menu } from "lucide-react";
 import { mainNav } from "@/data/navigation";
 import { useCart } from "@/lib/cart";
+import { useStoreCurrency } from "@/hooks/useStoreCurrency";
 import { formatPrice } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import type { StoreCurrency } from "@/lib/currency";
 import { AccountMenu } from "./AccountMenu";
 import { CartIcon } from "./CartIcon";
 import { CartDrawer } from "./CartDrawer";
@@ -17,9 +19,17 @@ import { MobileMenu } from "./MobileMenu";
 export function Header() {
   const pathname = usePathname();
   const { count, subtotal } = useCart();
+  const { currency, setCurrency } = useStoreCurrency();
   const [menuOpen, setMenuOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const [lastPathname, setLastPathname] = useState(pathname);
+
+  const switchCurrency = (next: StoreCurrency) => {
+    if (next === currency) return;
+    setCurrency(next);
+    // Remap catalog prices that were baked at fetch time.
+    window.location.reload();
+  };
 
   // Close the menu and cart when the route changes (covers browser back/forward too).
   if (pathname !== lastPathname) {
@@ -76,6 +86,27 @@ export function Header() {
           >
             <Menu size={28} aria-hidden="true" />
           </button>
+
+          <div
+            className="hidden items-center rounded border border-white/20 text-xs font-semibold uppercase tracking-wide text-white/80 sm:inline-flex"
+            role="group"
+            aria-label="Currency"
+          >
+            {(["USD", "CAD"] as StoreCurrency[]).map((code) => (
+              <button
+                key={code}
+                type="button"
+                onClick={() => switchCurrency(code)}
+                className={cn(
+                  "px-2 py-1 transition-colors",
+                  currency === code ? "bg-primary text-primary-foreground" : "hover:text-primary",
+                )}
+                aria-pressed={currency === code}
+              >
+                {code}
+              </button>
+            ))}
+          </div>
 
           <AccountMenu />
 

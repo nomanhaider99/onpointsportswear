@@ -1,6 +1,7 @@
 import type { Product, ProductCategory } from "@/data/products";
 import type { ProductCustomizerConfig } from "@/data/customizer";
 import { sizeRank } from "@/data/productSizes";
+import { getStoreCurrency, type StoreCurrency } from "@/lib/currency";
 import { mediaUrl } from "./client";
 
 export interface ApiCategory {
@@ -21,8 +22,11 @@ export interface ApiProduct {
   thumbnail?: string;
   images?: string[];
   price?: number;
+  priceCad?: number;
   salePrice?: number;
+  salePriceCad?: number;
   originalPrice?: number;
+  originalPriceCad?: number;
   featured?: boolean;
   type?: string;
   sizes?: string[] | string;
@@ -32,7 +36,9 @@ export interface ApiProduct {
   variants?: Array<{
     options?: Array<{ value?: string; attributeTitle?: string }>;
     price?: number;
+    priceCad?: number;
     salePrice?: number;
+    salePriceCad?: number;
     isActive?: boolean;
   }>;
   customizer?: ProductCustomizerConfig;
@@ -75,7 +81,32 @@ function sizeLabel(value: unknown) {
   return "";
 }
 
-function sizeRows(raw: ApiProduct, sale: number) {
+function activeSale(raw: ApiProduct, currency: StoreCurrency) {
+  if (currency === "CAD") {
+    return Number(raw.salePriceCad ?? raw.priceCad ?? raw.salePrice ?? raw.price ?? 0);
+  }
+  return Number(raw.salePrice ?? raw.price ?? 0);
+}
+
+function activeOriginal(raw: ApiProduct, currency: StoreCurrency, sale: number) {
+  if (currency === "CAD") {
+    return Number(raw.originalPriceCad ?? raw.priceCad ?? raw.originalPrice ?? raw.price ?? sale);
+  }
+  return Number(raw.originalPrice ?? raw.price ?? sale);
+}
+
+function variantAmount(
+  variant: NonNullable<ApiProduct["variants"]>[number],
+  fallback: number,
+  currency: StoreCurrency,
+) {
+  if (currency === "CAD") {
+    return Number(variant.salePriceCad || variant.priceCad || variant.salePrice || variant.price || fallback);
+  }
+  return Number(variant.salePrice || variant.price || fallback);
+}
+
+function sizeRows(raw: ApiProduct, sale: number, currency: StoreCurrency) {
   let labels: string[] = [];
   if (Array.isArray(raw.sizes)) {
     labels = raw.sizes.map(sizeLabel).filter(Boolean);
@@ -91,7 +122,7 @@ function sizeRows(raw: ApiProduct, sale: number) {
           /size/i.test(String(option.attributeTitle || "")),
         );
         const label = String(sizeOption?.value || variant.options?.[0]?.value || "").trim();
-        const price = Number(variant.salePrice || variant.price || sale);
+        const price = variantAmount(variant, sale, currency);
         return label ? { label, price: Number.isFinite(price) ? price : sale } : null;
       })
       .filter((row): row is { label: string; price: number } => Boolean(row));
@@ -107,24 +138,32 @@ function sizeRows(raw: ApiProduct, sale: number) {
     .map((label) => ({ label, price: sale }));
 }
 
-export function mapProduct(raw: ApiProduct): Product {
-  const sale = Number(raw.salePrice ?? raw.price ?? 0);
-  const sizes = sizeRows(raw, Number.isFinite(sale) ? sale : 0);
+export function mapProduct(raw: ApiProduct, currency: StoreCurrency = getStoreCurrency()): Product {
+  const sale = activeSale(raw, currency);
+  const sizes = sizeRows(raw, Number.isFinite(sale) ? sale : 0, currency);
   const prices = sizes.map((entry) => entry.price);
   const image = mediaUrl(raw.thumbnail || raw.images?.[0] || "");
+
+  const categoryId =
+    raw.category && typeof raw.category === "object"
+      ? String(raw.category._id || "")
+      : typeof raw.category === "string" && /^[a-f0-9]{24}$/i.test(raw.category)
+        ? raw.category
+        : "";
 
   return {
     id: String(raw._id || raw.id || slugify(raw.name)),
     slug: raw.slug || slugify(raw.name),
     name: raw.name,
     category: categoryName(raw),
+    categoryId: categoryId || undefined,
     priceMin: Math.min(...prices),
     priceMax: Math.max(...prices),
     image: image || "/images/logo.png",
     sizes,
     featured: Boolean(raw.featured),
     customizable: isCustomizableType(raw),
-    originalPrice: Number(raw.originalPrice ?? raw.price ?? sale) || undefined,
+    originalPrice: activeOriginal(raw, currency, sale) || undefined,
     description: raw.shortDescription || raw.description || "",
     colors: (raw.colors || []).map(String).filter(Boolean),
     stock: Number(raw.stock || 0),
@@ -145,9 +184,9 @@ export function mapCategories(raw: unknown): ApiCategory[] {
   return raw.filter((item): item is ApiCategory => Boolean(item && typeof item === "object" && "_id" in item && "name" in item));
 }
 
-export function mapProductList(raw: unknown): Product[] {
+export function mapProductList(raw: unknown, currency: StoreCurrency = getStoreCurrency()): Product[] {
   const rows = Array.isArray(raw) ? raw : [];
   return rows
     .filter((item): item is ApiProduct => Boolean(item && typeof item === "object" && ("name" in item)))
-    .map(mapProduct);
+    .map((item) => mapProduct(item, currency));
 }

@@ -40,7 +40,9 @@ export function CheckoutFlow() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentChoice>("stripe");
   const [enabledMethods, setEnabledMethods] = useState<PaymentChoice[]>(["cod"]);
   const [paypalClientId, setPaypalClientId] = useState("");
-  const [currency, setCurrency] = useState("USD");
+  const [currency, setCurrency] = useState(
+    emptyCheckoutDetails.country === "Canada" ? "CAD" : "USD",
+  );
   const [pendingPaypal, setPendingPaypal] = useState<{
     orderId: string;
     guestToken?: string;
@@ -55,7 +57,9 @@ export function CheckoutFlow() {
         const methods = (config.methods || []).filter(Boolean) as PaymentChoice[];
         setEnabledMethods(methods.length ? methods : ["cod"]);
         setPaypalClientId(config.paypalClientId || "");
-        setCurrency(config.currency || "USD");
+        // Prefer shopper region (Canada → CAD) over global payment env default.
+        const fromCountry = values.country === "Canada" ? "CAD" : "USD";
+        setCurrency(fromCountry || config.currency || "USD");
         const preferred = (["stripe", "paypal", "cod"] as PaymentMethodId[]).find((id) =>
           methods.includes(id as PaymentChoice),
         );
@@ -67,6 +71,10 @@ export function CheckoutFlow() {
         setPaymentMethod("cod");
       });
   }, []);
+
+  useEffect(() => {
+    setCurrency(values.country === "Canada" ? "CAD" : "USD");
+  }, [values.country]);
 
   useEffect(() => {
     if (isFirstStep.current) {

@@ -16,6 +16,8 @@ export interface Product {
   slug: string;
   name: string;
   category: ProductCategory;
+  /** Backend category ObjectId — used to resolve category size charts. */
+  categoryId?: string;
   priceMin: number;
   priceMax: number;
   image: string;

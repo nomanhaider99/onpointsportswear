@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Product } from "@/data/products";
 import { CustomizeStudioButton } from "@/components/customizer/CustomizeStudioButton";
 import { getAddToCartIssue, useCart } from "@/lib/cart";
+import { resolveSizeChart, type SizeChartInfo } from "@/lib/api/sizeChart";
 import { usesJerseyStudio } from "@/lib/jersey-studio";
 import { notify } from "@/lib/notify";
 import { formatPrice } from "@/lib/utils";
@@ -21,9 +22,11 @@ export function ProductDetail({ product }: { product: Product }) {
   const [error, setError] = useState("");
   const [added, setAdded] = useState(false);
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
+  const [sizeChart, setSizeChart] = useState<SizeChartInfo | null>(
+    product.sizeChart?.image ? product.sizeChart : null,
+  );
   const timeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const openStudio = usesJerseyStudio(product);
-  const sizeChart = product.sizeChart?.image ? product.sizeChart : null;
   const sizeLabels = useMemo(() => product.sizes.map((entry) => entry.label), [product.sizes]);
   const sizeGroups = useMemo(() => groupSelectedSizes(sizeLabels), [sizeLabels]);
   const ungroupedSizes = useMemo(() => {
@@ -39,7 +42,25 @@ export function ProductDetail({ product }: { product: Product }) {
     setSize(preferred);
     setError("");
     setSizeGuideOpen(false);
-  }, [product.id, product.sizes]);
+    setSizeChart(product.sizeChart?.image ? product.sizeChart : null);
+  }, [product.id, product.sizes, product.sizeChart]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const chart = await resolveSizeChart({
+        productId: product.id,
+        categoryId: product.categoryId,
+        categoryName: product.category,
+        productName: product.name,
+        embedded: product.sizeChart,
+      });
+      if (!cancelled) setSizeChart(chart);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [product.id, product.categoryId, product.category, product.name, product.sizeChart]);
 
   useEffect(() => {
     if (!sizeGuideOpen) return undefined;
@@ -55,9 +76,7 @@ export function ProductDetail({ product }: { product: Product }) {
     };
   }, [sizeGuideOpen]);
 
-  const blockedReason = openStudio
-    ? "Open the customizer to design and add this product to your cart."
-    : getAddToCartIssue(product, items, false);
+  const blockedReason = getAddToCartIssue(product, items, false);
 
   useEffect(() => {
     return () => {
@@ -75,10 +94,6 @@ export function ProductDetail({ product }: { product: Product }) {
 
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (openStudio) {
-      notify.info("Use Customize to design and add this item.");
-      return;
-    }
     if (blockedReason) {
       notify.error(blockedReason);
       setError(blockedReason);
@@ -91,6 +106,7 @@ export function ProductDetail({ product }: { product: Product }) {
     }
     setError("");
 
+    // Blank catalog order (no studio design) — customizer remains optional.
     const result = addItem(product, size, quantity);
     if (!result.ok) {
       setError(result.reason ?? "This product could not be added to your cart.");
@@ -132,20 +148,6 @@ export function ProductDetail({ product }: { product: Product }) {
           )}
         </p>
 
-        {openStudio ? (
-          <div className="rounded-lg border border-[var(--color-primary-line)] bg-primary-soft p-5">
-            <p className="text-base font-medium text-white">Product customizer</p>
-            <p className="mt-1 text-sm text-white/70">
-              Sign in first (same as the app), then design colors, patterns, logos, names, and socks.
-            </p>
-            <CustomizeStudioButton
-              product={product}
-              size={size}
-              className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-[#029b36]"
-            />
-          </div>
-        ) : null}
-
         <form onSubmit={onSubmit}>
           <div className="flex flex-col gap-3 rounded-lg bg-white/[0.04] p-5">
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -160,60 +162,71 @@ export function ProductDetail({ product }: { product: Product }) {
                 </button>
               ) : null}
             </div>
-            <div className="flex flex-col gap-4" role="group" aria-label="Size">
-              {sizeGroups.map((group) => (
-                <div key={group.id} className="flex flex-col gap-2">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-white/55">
-                    {group.label}
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {group.selected.map((code) => {
-                      const active = code === size;
-                      return (
-                        <button
-                          key={code}
-                          type="button"
-                          title={code}
-                          onClick={() => {
-                            setSize(code);
-                            setError("");
-                          }}
-                          className={`min-w-12 rounded-lg border px-4 py-2.5 text-base font-semibold transition-colors ${
-                            active
-                              ? "border-primary bg-primary text-primary-foreground"
-                              : "border-white/20 bg-transparent text-white hover:border-primary"
-                          }`}
-                        >
+            <div className="grid gap-3 sm:grid-cols-2" role="group" aria-label="Size">
+              {sizeGroups.map((group) => {
+                const groupHasSelection = group.selected.includes(size);
+                return (
+                  <label key={group.id} className="relative flex flex-col gap-1.5">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-white/55">
+                      {group.label}
+                    </span>
+                    <select
+                      value={groupHasSelection ? size : ""}
+                      aria-label={`${group.label} size`}
+                      onChange={(event) => {
+                        const next = event.target.value;
+                        if (!next) return;
+                        setSize(next);
+                        setError("");
+                      }}
+                      className="w-full appearance-none rounded-lg border border-white/20 bg-[#0f1218] px-4 py-2.5 pr-10 text-base font-semibold text-white outline-none transition-colors focus:border-primary"
+                    >
+                      <option value="">{`Select ${group.label.toLowerCase()} size`}</option>
+                      {group.selected.map((code) => (
+                        <option key={code} value={code}>
                           {shortSizeLabel(code)}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
+                        </option>
+                      ))}
+                    </select>
+                    <span
+                      aria-hidden="true"
+                      className="pointer-events-none absolute right-3 bottom-[14px] text-white/45"
+                    >
+                      ▾
+                    </span>
+                  </label>
+                );
+              })}
               {ungroupedSizes.length ? (
-                <div className="flex flex-wrap gap-2">
-                  {ungroupedSizes.map((entry) => {
-                    const active = entry.label === size;
-                    return (
-                      <button
-                        key={entry.label}
-                        type="button"
-                        onClick={() => {
-                          setSize(entry.label);
-                          setError("");
-                        }}
-                        className={`min-w-12 rounded-lg border px-4 py-2.5 text-base font-semibold transition-colors ${
-                          active
-                            ? "border-primary bg-primary text-primary-foreground"
-                            : "border-white/20 bg-transparent text-white hover:border-primary"
-                        }`}
-                      >
+                <label className="relative flex flex-col gap-1.5 sm:col-span-2">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-white/55">
+                    Other
+                  </span>
+                  <select
+                    value={ungroupedSizes.some((entry) => entry.label === size) ? size : ""}
+                    aria-label="Other size"
+                    onChange={(event) => {
+                      const next = event.target.value;
+                      if (!next) return;
+                      setSize(next);
+                      setError("");
+                    }}
+                    className="w-full appearance-none rounded-lg border border-white/20 bg-[#0f1218] px-4 py-2.5 pr-10 text-base font-semibold text-white outline-none transition-colors focus:border-primary"
+                  >
+                    <option value="">Select size</option>
+                    {ungroupedSizes.map((entry) => (
+                      <option key={entry.label} value={entry.label}>
                         {entry.label}
-                      </button>
-                    );
-                  })}
-                </div>
+                      </option>
+                    ))}
+                  </select>
+                  <span
+                    aria-hidden="true"
+                    className="pointer-events-none absolute right-3 bottom-[14px] text-white/45"
+                  >
+                    ▾
+                  </span>
+                </label>
               ) : null}
             </div>
           </div>
@@ -224,41 +237,49 @@ export function ProductDetail({ product }: { product: Product }) {
             </p>
           )}
 
-          {!openStudio ? (
-            <div className="mt-6 flex flex-wrap items-center gap-3">
-              <input
-                type="number"
-                min={1}
-                value={quantity}
-                aria-label={`${product.name} quantity`}
-                onChange={(event) => {
-                  const next = Number.parseInt(event.target.value, 10);
-                  setQuantity(Number.isNaN(next) || next < 1 ? 1 : next);
-                }}
-                className="w-16 rounded-lg border border-primary bg-transparent py-2 text-center text-base text-white"
-              />
-              <button
-                type="submit"
-                disabled={Boolean(blockedReason)}
-                aria-describedby={blockedReason ? "add-blocked" : undefined}
-                className="rounded-lg bg-primary px-[50px] py-[5px] text-base leading-8 text-primary-foreground transition-all duration-200 hover:bg-[#029b36] disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:bg-primary"
+          <div className="mt-6 flex flex-wrap items-center gap-3">
+            <input
+              type="number"
+              min={1}
+              value={quantity}
+              aria-label={`${product.name} quantity`}
+              onChange={(event) => {
+                const next = Number.parseInt(event.target.value, 10);
+                setQuantity(Number.isNaN(next) || next < 1 ? 1 : next);
+              }}
+              className="w-16 rounded-lg border border-primary bg-transparent py-2 text-center text-base text-white"
+            />
+            <button
+              type="submit"
+              disabled={Boolean(blockedReason)}
+              aria-describedby={blockedReason ? "add-blocked" : undefined}
+              className="rounded-lg bg-primary px-[50px] py-[5px] text-base leading-8 text-primary-foreground transition-all duration-200 hover:bg-[#029b36] disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:bg-primary"
+            >
+              Add to cart
+            </button>
+            {openStudio ? (
+              <CustomizeStudioButton
+                product={product}
+                size={size}
+                className="inline-flex items-center gap-2 rounded-lg border border-primary px-5 py-[5px] text-base leading-8 font-semibold text-primary transition-colors hover:bg-primary hover:text-primary-foreground"
               >
-                Add to cart
-              </button>
-              {blockedReason && (
-                <p id="add-blocked" className="w-full text-sm text-[#ffb95e]">
-                  {blockedReason}
-                </p>
-              )}
-              <span aria-live="polite" className={added ? "text-sm text-primary" : "sr-only"}>
-                {added ? "Added to cart" : ""}
-              </span>
-            </div>
-          ) : (
-            <p className="mt-4 text-sm text-white/60">
-              Pick a size, then open Customize. You must be signed in — designs save to your account.
-            </p>
-          )}
+                Customize
+              </CustomizeStudioButton>
+            ) : null}
+            {blockedReason && (
+              <p id="add-blocked" className="w-full text-sm text-[#ffb95e]">
+                {blockedReason}
+              </p>
+            )}
+            <span aria-live="polite" className={added ? "text-sm text-primary" : "sr-only"}>
+              {added ? "Added to cart" : ""}
+            </span>
+            {openStudio ? (
+              <p className="w-full text-sm text-white/55">
+                Add to cart for a blank order, or Customize to design first (sign in required).
+              </p>
+            ) : null}
+          </div>
         </form>
       </div>
 

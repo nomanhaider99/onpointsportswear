@@ -27,17 +27,8 @@ export function AddToCartButton({ product }: { product: Product }) {
     };
   }, []);
 
-  if (product.customizable) {
-    return (
-      <CustomizeStudioButton product={product} className={buttonClass}>
-        Customize
-        <span className="sr-only"> {product.name}</span>
-      </CustomizeStudioButton>
-    );
-  }
-
   function onClick() {
-    const result = addItem(product, product.sizes[0].label, 1);
+    const result = addItem(product, product.sizes[0]?.label || "One size", 1);
     if (!result.ok) {
       setError(result.reason ?? "This product could not be added to your cart.");
       return;
@@ -50,9 +41,17 @@ export function AddToCartButton({ product }: { product: Product }) {
 
   return (
     <div className="flex flex-col gap-2">
-      <button type="button" onClick={onClick} className={buttonClass}>
-        {added ? "Added" : "Add to cart"}
-      </button>
+      <div className="flex flex-wrap items-center gap-2">
+        <button type="button" onClick={onClick} className={buttonClass}>
+          {added ? "Added" : "Add to cart"}
+        </button>
+        {product.customizable ? (
+          <CustomizeStudioButton product={product} className={buttonClass}>
+            Customize
+            <span className="sr-only"> {product.name}</span>
+          </CustomizeStudioButton>
+        ) : null}
+      </div>
       {error && (
         <p role="alert" className="text-sm text-[#ffb95e]">
           {error}

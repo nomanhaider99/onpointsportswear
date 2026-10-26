@@ -1,6 +1,7 @@
 import type { Product } from "@/data/products";
 import { JERSEY_STUDIO_URL } from "@/lib/config";
 import { getStoredToken } from "@/lib/api/client";
+import { getStoreCurrency } from "@/lib/currency";
 
 const STUDIO_BASE = (JERSEY_STUDIO_URL || "https://customizer.betterbuildsc.com").replace(
   /\/$/,
@@ -43,6 +44,7 @@ export function jerseyStudioHref(
     params.set("size", variation.label);
     params.set("price", String(variation.price));
   }
+  params.set("currency", getStoreCurrency());
   const token =
     typeof options.token === "string" && options.token
       ? options.token

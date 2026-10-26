@@ -79,11 +79,13 @@ export const placeOrder = createAsyncThunk(
         .filter(Boolean)
         .join("\n\n");
 
+      const shipCountry = countryCode(draft.details.country);
       const data = await ordersApi.create({
         customerName: draft.details.fullName,
         customerEmail: draft.details.email,
         customerPhone: draft.details.phone,
         paymentMethod,
+        currency: shipCountry === "CA" ? "CAD" : "USD",
         notes,
         organization: draft.details.organization,
         neededBy: draft.details.neededBy,
@@ -95,7 +97,7 @@ export const placeOrder = createAsyncThunk(
           city: draft.details.city,
           state_province: draft.details.region,
           postal_code: draft.details.postalCode,
-          country_code: countryCode(draft.details.country),
+          country_code: shipCountry,
           phone: draft.details.phone,
           email: draft.details.email,
         },

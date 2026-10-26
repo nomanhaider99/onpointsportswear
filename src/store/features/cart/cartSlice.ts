@@ -1,5 +1,4 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
-import { isCustomizable } from "@/data/customizer";
 import type { Product } from "@/data/products";
 import { mediaUrl } from "@/lib/api/client";
 import { getAddToCartIssue, getCartKind, type CartItem } from "@/lib/cart";
@@ -109,7 +108,8 @@ const cartSlice = createSlice({
           image: mediaUrl(product.image) || product.image,
           quantity,
           productId: product.id,
-          customizable: isCustomizable(product),
+          // Blank add-to-cart is standard; only studio designs are "customizable" lines.
+          customizable: Boolean(customization),
           ...(customization ? { customization } : {}),
         });
       }

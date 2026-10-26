@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import { isCustomizable } from "@/data/customizer";
 import type { Product } from "@/data/products";
 import type { CartItemCustomization } from "@/lib/customization";
 import { notify } from "@/lib/notify";
@@ -45,7 +44,8 @@ export function cartItemCompareAt(item: CartItem, catalogOriginal?: number) {
 
 export function getCartKind(entries: CartItem[]): CartKind {
   if (entries.length === 0) return "empty";
-  return entries.some((entry) => entry.customizable) ? "customizable" : "standard";
+  // Studio designs only — blank catalog add-to-cart stays "standard".
+  return entries.some((entry) => Boolean(entry.customization)) ? "customizable" : "standard";
 }
 
 export const MISSING_LOGO_MESSAGE =
@@ -57,16 +57,18 @@ export function getMixMessage(incoming: CartKind): string {
     : "Your cart has custom-logo items. Standard products must be ordered separately - check out or clear your cart first.";
 }
 
+/**
+ * Customizable catalog products can still be bought blank via Add to cart.
+ * Only lines that already carry a studio design count as "customizable" for cart mixing.
+ */
 export function getAddToCartIssue(
   product: Product,
   entries: CartItem[],
   hasCustomization = false,
 ): string | null {
-  const needsLogo = isCustomizable(product);
   const kind = getCartKind(entries);
-  const incoming: CartKind = needsLogo ? "customizable" : "standard";
+  const incoming: CartKind = hasCustomization ? "customizable" : "standard";
   if (kind !== "empty" && kind !== incoming) return getMixMessage(incoming);
-  if (needsLogo && !hasCustomization) return MISSING_LOGO_MESSAGE;
   return null;
 }
 
