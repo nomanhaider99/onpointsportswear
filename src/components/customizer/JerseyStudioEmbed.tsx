@@ -117,7 +117,9 @@ export function JerseyStudioEmbed() {
       if (data.type === "op-jersey-add-to-cart" && data.cartItem) {
         let line = data.cartItem;
         const previewRaw = data.previewDataUrl || data.design?.previewDataUrl || "";
-        const incomingState = data.design?.state || line.customization?.designState || null;
+        const incomingState =
+          (data.design?.state as Record<string, unknown> | undefined) ||
+          line.customization?.designState;
         const incomingSummary =
           line.customization?.designSummary ||
           data.design?.name ||
@@ -149,7 +151,7 @@ export function JerseyStudioEmbed() {
                   previewUrl,
                   studio: "jersey",
                   designSummary: incomingSummary,
-                  designState: incomingState || line.customization?.designState || null,
+                  designState: incomingState,
                 },
               };
             }

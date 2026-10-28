@@ -174,7 +174,6 @@ const cartSlice = createSlice({
         key,
         customizable: true,
         customization: {
-          customizationId,
           printAreaId: incoming.customization?.printAreaId || "jersey",
           printAreaName: incoming.customization?.printAreaName || "Jersey",
           transform: incoming.customization?.transform || {

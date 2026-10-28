@@ -15,6 +15,15 @@ import {
   shortSizeLabel,
 } from "@/data/productSizes";
 
+function embeddedSizeChart(chart: Product["sizeChart"]): SizeChartInfo | null {
+  if (!chart?.image) return null;
+  return {
+    title: chart.title || "Size guide",
+    description: chart.description || "",
+    image: chart.image,
+  };
+}
+
 export function ProductDetail({ product }: { product: Product }) {
   const { addItem, items } = useCart();
   const [size, setSize] = useState("");
@@ -22,8 +31,8 @@ export function ProductDetail({ product }: { product: Product }) {
   const [error, setError] = useState("");
   const [added, setAdded] = useState(false);
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
-  const [sizeChart, setSizeChart] = useState<SizeChartInfo | null>(
-    product.sizeChart?.image ? product.sizeChart : null,
+  const [sizeChart, setSizeChart] = useState<SizeChartInfo | null>(() =>
+    embeddedSizeChart(product.sizeChart),
   );
   const timeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const openStudio = usesJerseyStudio(product);
@@ -42,7 +51,7 @@ export function ProductDetail({ product }: { product: Product }) {
     setSize(preferred);
     setError("");
     setSizeGuideOpen(false);
-    setSizeChart(product.sizeChart?.image ? product.sizeChart : null);
+    setSizeChart(embeddedSizeChart(product.sizeChart));
   }, [product.id, product.sizes, product.sizeChart]);
 
   useEffect(() => {
