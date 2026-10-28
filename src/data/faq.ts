@@ -1,7 +1,7 @@
 export type FaqItem = {
   id: string;
   question: string;
-  /** Plain paragraphs; use bullets for lists. */
+  /** Paragraphs; wrap text in **double asterisks** to bold it. Use bullets for lists. */
   answer: string[];
   bullets?: string[];
 };
@@ -19,23 +19,23 @@ export const faqs: FaqItem[] = [
     id: "turnaround",
     question: "What is your turnaround time?",
     answer: ["Our estimated production turnaround times are:"],
-    bullets: ["Hockey: 4–5 weeks", "All Other Sports: 3–4 weeks"],
+    bullets: ["**Hockey: 4–5 weeks**", "**All Other Sports: 3–4 weeks**"],
   },
   {
     id: "ordering-process",
     question: "What is the ordering process?",
     answer: [
-      "Step 1 – Create Your Design: Use our online jersey customizer, send us your own design, or contact our team to help create your dream jersey.",
-      "Step 2 – Submit Your Order: Finalize all your order details on our website and submit your order.",
-      "Step 3 – Review Your Digital Proof: We'll send you a digital proof of your custom jersey for review and approval.",
-      "Step 4 – Approve & Start Production: Once you approve your digital proof, we'll begin production of your custom order.",
+      "**Step 1 – Create Your Design:** Use our online jersey customizer, send us your own design, or contact our team to help create your dream jersey.",
+      "**Step 2 – Submit Your Order:** Finalize all your order details on our website and submit your order.",
+      "**Step 3 – Review Your Digital Proof:** We'll send you a digital proof of your custom jersey for review and approval.",
+      "**Step 4 – Approve & Start Production:** Once you approve your digital proof, we'll begin production of your custom order.",
     ],
   },
   {
     id: "minimum-order",
     question: "What is your minimum order quantity?",
     answer: [
-      "Our minimum order quantity is 6 pieces. For reorders, there is no minimum quantity required.",
+      "**Our minimum order quantity is 6 pieces. For reorders, there is no minimum quantity required.**",
     ],
   },
   {
@@ -43,7 +43,7 @@ export const faqs: FaqItem[] = [
     question: "How much is shipping, and where do you ship?",
     answer: [
       "We proudly ship across Canada and the USA!",
-      "Enjoy FREE SHIPPING on team orders of 12 or more jerseys!",
+      "**Enjoy FREE SHIPPING on team orders of 12 or more jerseys!**",
       "For orders of fewer than 12 jerseys, including smaller reorders, shipping fees will apply. Shipping costs will be confirmed before your order is finalized.",
     ],
   },

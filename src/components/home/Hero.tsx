@@ -17,7 +17,7 @@ export function Hero() {
             <span className="text-primary">STAND OUT</span>.
           </h1>
           <p className="mt-5 text-sm text-white/80 md:text-base">
-            SUBLMATION &amp; EMBROIDERY FOR LEAGUES, SCHOOLS &amp; CLUBS. NO MINIMUMS. PRO-GRADE
+            SUBLMATION &amp; EMBROIDERY FOR LEAGUES, SCHOOLS &amp; CLUBS. 6-PIECE MINIMUM. PRO-GRADE
             QUALITY. FAST TURNAROUND.
           </p>
           <div className="mt-6 flex flex-col gap-2.5 sm:flex-row sm:justify-center lg:justify-start">

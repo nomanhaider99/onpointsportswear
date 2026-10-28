@@ -28,7 +28,7 @@ export async function generateMetadata({
   const product = await loadProduct(slug);
   if (!product) return { title: "Product not found" };
 
-  const description = `${product.name} — ${formatPriceRange(product.priceMin, product.priceMax)}. Custom ${product.category.toLowerCase()} from On Point Sportswear with no minimum orders.`;
+  const description = `${product.name} — ${formatPriceRange(product.priceMin, product.priceMax)}. Custom ${product.category.toLowerCase()} from On Point Sportswear with a low 6-piece minimum.`;
 
   return {
     title: product.name,

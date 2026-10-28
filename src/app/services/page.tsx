@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   openGraph: {
     url: "/services",
     title: "Services | On Point Sportswear",
-    description: "What we offer - from concept to court. No minimums, fast turnaround.",
+    description: "What we offer - from concept to court. Low 6-piece minimum, fast turnaround.",
   },
 };
 

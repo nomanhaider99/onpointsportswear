@@ -1,8 +1,8 @@
 import type { CartItem } from "@/lib/cart";
 import { cartItemCompareAt } from "@/lib/cart";
 
-/** Matches sports_backend orderController shipping rule. */
-export const FREE_SHIPPING_MIN = 100;
+/** FAQ: free shipping on team orders of 12 or more pieces; smaller orders pay a fee. */
+export const FREE_SHIPPING_MIN_QTY = 12;
 export const FLAT_SHIPPING_FEE = 8;
 
 export type CartTotalsInput = {
@@ -47,7 +47,7 @@ export function computeCartTotals({
 
   const coupon = Math.max(0, Number(couponDiscount) || 0);
   const discountTotal = Number((productDiscount + coupon).toFixed(2));
-  const shipping = subtotal >= FREE_SHIPPING_MIN ? 0 : FLAT_SHIPPING_FEE;
+  const shipping = itemCount >= FREE_SHIPPING_MIN_QTY ? 0 : FLAT_SHIPPING_FEE;
   const total = Number(Math.max(0, subtotal - coupon + shipping).toFixed(2));
 
   return {

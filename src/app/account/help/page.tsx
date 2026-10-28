@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { AccountPageShell } from "@/components/account/AccountChrome";
 import { faqClosing, faqs } from "@/data/faq";
+import { FaqText } from "@/components/faq/FaqText";
 
 export default function HelpPage() {
   const [openId, setOpenId] = useState<string | null>(faqs[0]?.id ?? null);
@@ -37,13 +38,15 @@ export default function HelpPage() {
                   <div className="space-y-2 border-t border-white/10 px-3.5 pb-3.5 pt-2 pl-8">
                     {item.answer.map((paragraph) => (
                       <p key={paragraph} className="text-sm leading-relaxed text-white/70">
-                        {paragraph}
+                        <FaqText text={paragraph} />
                       </p>
                     ))}
                     {item.bullets?.length ? (
                       <ul className="list-disc space-y-1 pl-4 text-sm text-white/70">
                         {item.bullets.map((bullet) => (
-                          <li key={bullet}>{bullet}</li>
+                          <li key={bullet}>
+                            <FaqText text={bullet} />
+                          </li>
                         ))}
                       </ul>
                     ) : null}

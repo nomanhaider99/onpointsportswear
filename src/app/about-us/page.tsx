@@ -14,7 +14,7 @@ export const metadata: Metadata = {
     url: "/about-us",
     title: "About On Point Sportswear",
     description:
-      "Engineered in Ontario, running worldwide. Pro-grade sublimation and high-density embroidery with zero order minimums.",
+      "Engineered in Ontario, running worldwide. Pro-grade sublimation and high-density embroidery with a low 6-piece order minimum.",
   },
 };
 
@@ -42,7 +42,8 @@ export default function AboutPage() {
               athletes who refuse to compromise on quality or style. Born out of a passion for pure
               performance in Ontario, Canada, we serve youth leagues, collegiate programs, and
               school teams across North America and beyond. With pro-grade sublimation and
-              high-density embroidery, we deliver unmatched durability with zero order minimums.
+              high-density embroidery, we deliver unmatched durability with a low 6-piece minimum
+              and no minimum on reorders.
             </p>
           </div>
           <div className="lg:w-1/2">

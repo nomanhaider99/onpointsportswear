@@ -33,7 +33,7 @@ export function AboutPreview() {
           <div className="flex flex-col justify-between gap-5 lg:w-[30%]">
             <p className="text-sm text-white/80 md:text-base">
               WE SUPPLY CUSTOM ELITE JERSEYS, PANTS, AND TEAM GEAR TO YOUTH LEAGUES, COLLEGIATE
-              PROGRAMS, AND SCHOOL TEAMS. HIGH-IMPACT DESIGN, NO MINIMUM ORDERS.
+              PROGRAMS, AND SCHOOL TEAMS. HIGH-IMPACT DESIGN, LOW 6-PIECE MINIMUM.
             </p>
             <Image
               src="/images/about-side.png"

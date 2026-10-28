@@ -33,7 +33,7 @@ export const services: Service[] = [
   {
     id: "tournament-packages",
     title: "Tournament Packages",
-    description: "Bundled pricing for large events with fast turnaround and no minimums.",
+    description: "Bundled pricing for large events with fast turnaround and free shipping on 12+ pieces.",
   },
 ];
 

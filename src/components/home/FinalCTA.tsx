@@ -18,7 +18,7 @@ export function FinalCTA() {
           READY TO GEAR UP YOUR TEAM?
         </h2>
         <p className="mx-auto mt-5 max-w-2xl text-base text-white/80 md:text-lg">
-          Get custom jerseys, uniforms &amp; team gear - no minimums, fast turnaround.
+          Get custom jerseys, uniforms &amp; team gear - 6-piece minimum, fast turnaround.
         </p>
         <div className="mt-6 flex justify-center">
           <ButtonLink href="/products">SHOP NOW</ButtonLink>

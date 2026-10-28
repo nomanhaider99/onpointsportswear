@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { FaqItem } from "@/data/faq";
+import { FaqText } from "./FaqText";
 
 export function FaqAccordion({ items }: { items: FaqItem[] }) {
   const [openId, setOpenId] = useState<string | null>(items[0]?.id ?? null);
@@ -38,13 +39,15 @@ export function FaqAccordion({ items }: { items: FaqItem[] }) {
               <div className="space-y-3 border-t border-white/10 px-4 pb-5 pt-3 sm:px-5 sm:pl-12">
                 {item.answer.map((paragraph) => (
                   <p key={paragraph} className="text-sm leading-relaxed text-white/75 sm:text-base">
-                    {paragraph}
+                    <FaqText text={paragraph} />
                   </p>
                 ))}
                 {item.bullets?.length ? (
                   <ul className="list-disc space-y-1.5 pl-5 text-sm text-white/75 sm:text-base">
                     {item.bullets.map((bullet) => (
-                      <li key={bullet}>{bullet}</li>
+                      <li key={bullet}>
+                        <FaqText text={bullet} />
+                      </li>
                     ))}
                   </ul>
                 ) : null}

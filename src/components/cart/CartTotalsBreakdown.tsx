@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { computeCartTotals, type CartTotals } from "@/lib/cart-totals";
+import { computeCartTotals, FREE_SHIPPING_MIN_QTY, type CartTotals } from "@/lib/cart-totals";
 import { formatPrice } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
@@ -106,9 +106,11 @@ export function CartTotalsBreakdown({
           <dd className="text-lg font-bold text-primary">{formatPrice(totals.total)}</dd>
         </div>
       </dl>
-      {totals.subtotal > 0 && totals.subtotal < 100 ? (
+      {totals.itemCount > 0 && totals.itemCount < FREE_SHIPPING_MIN_QTY ? (
         <p className="text-xs text-white/50">
-          Add {formatPrice(100 - totals.subtotal)} more for free shipping.
+          Add {FREE_SHIPPING_MIN_QTY - totals.itemCount} more{" "}
+          {FREE_SHIPPING_MIN_QTY - totals.itemCount === 1 ? "piece" : "pieces"} for free shipping
+          on team orders of {FREE_SHIPPING_MIN_QTY}+.
         </p>
       ) : null}
     </div>

@@ -17,7 +17,7 @@ export const siteConfig = {
   name: "On Point Sportswear",
   title: "On Point Sportswear | Custom Sportswear",
   description:
-    "Custom sportswear engineered in Ontario for leagues, schools & clubs across Canada & USA. Sublimation & embroidery with no minimums and fast turnaround.",
+    "Custom sportswear engineered in Ontario for leagues, schools & clubs across Canada & USA. Sublimation & embroidery with a low 6-piece minimum and fast turnaround.",
   /** Production site origin for metadataBase / OG URLs. */
   url: resolveSiteUrl(),
   email: "onpointpromotions23@gmail.com",

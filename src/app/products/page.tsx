@@ -6,13 +6,13 @@ import { ProductFilters } from "@/components/products/ProductFilters";
 export const metadata: Metadata = {
   title: "Products",
   description:
-    "Explore our high-impact custom sportswear collections. Jerseys, hoodies, shorts and accessories engineered for maximum performance with no minimum orders.",
+    "Explore our high-impact custom sportswear collections. Jerseys, hoodies, shorts and accessories engineered for maximum performance with a low 6-piece minimum.",
   alternates: { canonical: "/products" },
   openGraph: {
     url: "/products",
     title: "Pro-Grade Gear | On Point Sportswear",
     description:
-      "Explore our high-impact custom sportswear collections. Engineered for maximum performance with no minimum orders.",
+      "Explore our high-impact custom sportswear collections. Engineered for maximum performance with a low 6-piece minimum.",
   },
 };
 
@@ -25,7 +25,7 @@ export default function ProductsPage() {
         </SectionHeading>
         <p className="mx-auto mt-4 max-w-3xl text-base text-white/80 md:text-lg">
           Explore our high-impact custom sportswear collections. Engineered for maximum performance
-          with no minimum orders.
+          with a low 6-piece minimum.
         </p>
       </div>
 
