@@ -3,18 +3,18 @@ import Image from "next/image";
 import { Section } from "@/components/ui/Section";
 import { Eyebrow, SectionHeading } from "@/components/ui/SectionHeading";
 import { StatCounter } from "@/components/about/StatCounter";
-import { aboutStats, teamMembers } from "@/data/team";
+import { aboutStats } from "@/data/team";
 
 export const metadata: Metadata = {
   title: "About Us",
   description:
-    "On Point supplies elite custom jerseys, pants and team gear. Engineered in Ontario, serving youth leagues, collegiate programs and school teams across North America.",
+    "On Point Sportswear was created from a lifelong passion for sports and years of firsthand experience as a player, coach, team manager, and league organizer. Built to Perform. Designed to Stand Out.",
   alternates: { canonical: "/about-us" },
   openGraph: {
     url: "/about-us",
     title: "About On Point Sportswear",
     description:
-      "Engineered in Ontario, running worldwide. Pro-grade sublimation and high-density embroidery with a low 6-piece order minimum.",
+      "Apparel programs designed by someone who understands sports from the inside — helping every athlete look, feel, and perform their best.",
   },
 };
 
@@ -33,18 +33,39 @@ export default function AboutPage() {
 
         <div className="container-site mt-[50px] flex flex-col gap-10 lg:flex-row lg:items-center">
           <div className="lg:w-1/2 max-lg:text-center">
-            <Eyebrow boxed>OUR MISSION</Eyebrow>
+            <Eyebrow boxed>OUR STORY</Eyebrow>
             <h2 className="mt-[25px] text-[30px] font-semibold leading-tight text-white md:text-[32px] lg:w-[90%]">
-              ENGINEERED IN ONTARIO, RUNNING <span className="text-primary">WORLDWIDE</span>.
+              DESIGNED BY SOMEONE WHO UNDERSTANDS SPORTS{" "}
+              <span className="text-primary">FROM THE INSIDE</span>.
             </h2>
-            <p className="mt-5 text-base text-white/80 md:text-lg">
-              At On Point, we supply elite custom jerseys, pants, and team gear designed for
-              athletes who refuse to compromise on quality or style. Born out of a passion for pure
-              performance in Ontario, Canada, we serve youth leagues, collegiate programs, and
-              school teams across North America and beyond. With pro-grade sublimation and
-              high-density embroidery, we deliver unmatched durability with a low 6-piece minimum
-              and no minimum on reorders.
-            </p>
+            <div className="mt-5 space-y-4 text-base text-white/80 md:text-lg">
+              <p>
+                On Point Sportswear was created from a lifelong passion for sports and years of
+                firsthand experience as a player, coach, team manager, and league
+                organizer/coordinator.
+              </p>
+              <p>
+                Being involved in sports from so many different perspectives has given me a strong
+                understanding of what players, coaches, teams, and organizations truly need when it
+                comes to uniforms and apparel. I understand the importance of quality, comfort,
+                performance, organization, and having a supplier you can depend on.
+              </p>
+              <p>
+                But to me, team apparel is about more than just what you wear. A great uniform helps
+                create pride, confidence, identity, and a sense of belonging. When players put on
+                their team colours, they should feel like they are part of something bigger than
+                themselves.
+              </p>
+              <p>
+                That experience and belief are what inspired me to create On Point Sportswear — to
+                provide teams and organizations with apparel programs designed by someone who
+                understands sports from the inside.
+              </p>
+              <p>
+                Our goal is simple: make the apparel process easier for coaches and organizations
+                while helping every athlete look, feel, and perform their best.
+              </p>
+            </div>
           </div>
           <div className="lg:w-1/2">
             <Image
@@ -67,41 +88,6 @@ export default function AboutPage() {
           ))}
         </div>
       </section>
-
-      <Section>
-        <div className="container-site text-center">
-          <SectionHeading>
-            THE FORCE BEHIND <span className="text-primary">THE GEAR</span>
-          </SectionHeading>
-          <p className="mx-auto mt-4 max-w-2xl text-base text-white/80 md:text-lg">
-            Dedicated performance specialists committed to making your team stand out.
-          </p>
-        </div>
-
-        <div className="container-site mt-[50px] grid gap-2.5 md:grid-cols-2 lg:grid-cols-3">
-          {teamMembers.map((member) => (
-            <article
-              key={member.id}
-              className="rounded-xl border border-border bg-card p-5 transition-colors duration-300 hover:border-primary max-md:text-center"
-            >
-              <Image
-                src={member.image}
-                alt={member.name}
-                width={320}
-                height={260}
-                sizes="(max-width: 767px) 100vw, (max-width: 1023px) 50vw, 33vw"
-                className="h-auto w-full rounded-lg object-cover"
-              />
-              <h3 className="mt-4 font-[family-name:var(--font-inter)] text-xl font-bold text-secondary">
-                {member.name}
-              </h3>
-              <p className="mt-1 font-[family-name:var(--font-inter)] text-sm text-primary">
-                {member.role}
-              </p>
-            </article>
-          ))}
-        </div>
-      </Section>
     </>
   );
 }

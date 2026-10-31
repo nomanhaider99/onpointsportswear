@@ -13,7 +13,7 @@ export function AboutPreview() {
         <div className="lg:w-3/4">
           <Eyebrow className="max-md:text-center">ABOUT US</Eyebrow>
           <SectionHeading className="mt-2 max-md:text-center">
-            CUSTOM SPORTSWEAR - ENGINEERED IN ONTARIO, SERVING CANADA &amp; USA.
+            BUILT TO PERFORM. DESIGNED TO STAND OUT.
           </SectionHeading>
         </div>
       </div>
@@ -32,8 +32,9 @@ export function AboutPreview() {
           </div>
           <div className="flex flex-col justify-between gap-5 lg:w-[30%]">
             <p className="text-sm text-white/80 md:text-base">
-              WE SUPPLY CUSTOM ELITE JERSEYS, PANTS, AND TEAM GEAR TO YOUTH LEAGUES, COLLEGIATE
-              PROGRAMS, AND SCHOOL TEAMS. HIGH-IMPACT DESIGN, LOW 6-PIECE MINIMUM.
+              Created from a lifelong passion for sports — as a player, coach, team manager, and
+              league organizer. Apparel programs designed by someone who understands sports from the
+              inside, so every athlete can look, feel, and perform their best.
             </p>
             <Image
               src="/images/about-side.png"
