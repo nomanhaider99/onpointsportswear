@@ -20,7 +20,7 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
-        hostname: "backend.betterbuildsc.com",
+        hostname: "backend.onpointsportswear.com",
         pathname: "/**",
       },
       {
@@ -45,12 +45,12 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
-        hostname: "betterbuildsc.com",
+        hostname: "onpointsportswear.com",
         pathname: "/**",
       },
       {
         protocol: "https",
-        hostname: "**.betterbuildsc.com",
+        hostname: "**.onpointsportswear.com",
         pathname: "/**",
       },
     ],

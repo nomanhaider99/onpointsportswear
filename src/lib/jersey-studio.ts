@@ -3,7 +3,7 @@ import { JERSEY_STUDIO_URL } from "@/lib/config";
 import { getStoredToken } from "@/lib/api/client";
 import { getStoreCurrency } from "@/lib/currency";
 
-const STUDIO_BASE = (JERSEY_STUDIO_URL || "https://customizer.betterbuildsc.com").replace(
+const STUDIO_BASE = (JERSEY_STUDIO_URL || "https://customizer.onpointsportswear.com").replace(
   /\/$/,
   "",
 );

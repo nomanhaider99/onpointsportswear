@@ -5,7 +5,6 @@ import { ProductDetail } from "@/components/products/ProductDetail";
 import { ProductGrid } from "@/components/products/ProductGrid";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { Section } from "@/components/ui/Section";
-import { getProductBySlug } from "@/data/products";
 import { fetchProductBySlug, fetchShopCatalog } from "@/store/features/catalog/catalogSlice";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
@@ -14,8 +13,7 @@ export function ProductPageClient({ slug }: { slug: string }) {
   const { products, current, productLoading, loading, bySlug, error } = useAppSelector((state) => state.catalog);
 
   const product =
-    (current?.slug === slug ? current : bySlug[slug] || products.find((item) => item.slug === slug)) ||
-    getProductBySlug(slug);
+    current?.slug === slug ? current : bySlug[slug] || products.find((item) => item.slug === slug);
 
   useEffect(() => {
     if (!products.length) dispatch(fetchShopCatalog());

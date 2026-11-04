@@ -163,7 +163,7 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
       window.location.protocol === "https:" &&
       /^https?:\/\/(localhost|127\.0\.0\.1)/i.test(base)
     ) {
-      base = "https://backend.betterbuildsc.com/api";
+      base = "https://backend.onpointsportswear.com/api";
     }
     response = await fetch(`${base}${path}${suffix}`, {
       method: options.method || "GET",

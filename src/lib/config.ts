@@ -1,4 +1,4 @@
-const PROD_API = "https://backend.betterbuildsc.com/api";
+const PROD_API = "https://backend.onpointsportswear.com/api";
 const DEV_API = "http://127.0.0.1:5000/api";
 
 function isLoopback(url: string) {
@@ -40,7 +40,7 @@ export const WEB_URL = String(process.env.NEXT_PUBLIC_WEB_URL || "")
 export const JERSEY_STUDIO_URL = String(
   process.env.NEXT_PUBLIC_JERSEY_STUDIO_URL ||
     process.env.NEXT_PUBLIC_CUSTOMIZER_URL ||
-    "https://customizer.betterbuildsc.com",
+    "https://customizer.onpointsportswear.com",
 )
   .trim()
   .replace(/\/$/, "");

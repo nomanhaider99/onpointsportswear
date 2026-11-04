@@ -140,8 +140,9 @@ function sizeRows(raw: ApiProduct, sale: number, currency: StoreCurrency) {
 
 export function mapProduct(raw: ApiProduct, currency: StoreCurrency = getStoreCurrency()): Product {
   const sale = activeSale(raw, currency);
-  const sizes = sizeRows(raw, Number.isFinite(sale) ? sale : 0, currency);
-  const prices = sizes.map((entry) => entry.price);
+  const safeSale = Number.isFinite(sale) ? sale : 0;
+  const sizes = sizeRows(raw, safeSale, currency);
+  const prices = sizes.map((entry) => entry.price).filter((value) => Number.isFinite(value));
   const image = mediaUrl(raw.thumbnail || raw.images?.[0] || "");
 
   const categoryId =
@@ -157,10 +158,10 @@ export function mapProduct(raw: ApiProduct, currency: StoreCurrency = getStoreCu
     name: raw.name,
     category: categoryName(raw),
     categoryId: categoryId || undefined,
-    priceMin: Math.min(...prices),
-    priceMax: Math.max(...prices),
+    priceMin: prices.length ? Math.min(...prices) : safeSale,
+    priceMax: prices.length ? Math.max(...prices) : safeSale,
     image: image || "/images/logo.png",
-    sizes,
+    sizes: sizes.length ? sizes : [{ label: "One size", price: safeSale }],
     featured: Boolean(raw.featured),
     customizable: isCustomizableType(raw),
     originalPrice: activeOriginal(raw, currency, sale) || undefined,

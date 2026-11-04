@@ -3,7 +3,6 @@ import { ProductPageClient } from "@/components/products/ProductPageClient";
 import { catalogApi } from "@/lib/api/client";
 import { mapProduct, mapProductList, type ApiProduct } from "@/lib/api/mapProduct";
 import { formatPriceRange } from "@/lib/utils";
-import { getProductBySlug } from "@/data/products";
 
 export const dynamicParams = true;
 
@@ -13,9 +12,9 @@ async function loadProduct(slug: string) {
       return mapProduct((await catalogApi.product(slug)) as unknown as ApiProduct);
     }
     const data = await catalogApi.products({ search: slug, limit: 80 });
-    return mapProductList(data.products).find((product) => product.slug === slug) || getProductBySlug(slug);
+    return mapProductList(data.products).find((product) => product.slug === slug);
   } catch {
-    return getProductBySlug(slug);
+    return undefined;
   }
 }
 

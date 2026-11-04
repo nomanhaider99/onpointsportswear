@@ -3,12 +3,12 @@ function resolveSiteUrl() {
     process.env.NEXT_PUBLIC_WEB_URL ||
       process.env.NEXT_PUBLIC_SITE_URL ||
       process.env.VERCEL_PROJECT_PRODUCTION_URL ||
-      "https://onpointsportswear.vercel.app",
+      "https://onpointsportswear.com",
   )
     .trim()
     .replace(/\/$/, "");
 
-  if (!raw) return "https://onpointsportswear.vercel.app";
+  if (!raw) return "https://onpointsportswear.com";
   if (/^https?:\/\//i.test(raw)) return raw;
   return `https://${raw.replace(/^\/\//, "")}`;
 }

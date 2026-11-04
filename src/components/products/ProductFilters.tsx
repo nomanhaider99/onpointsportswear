@@ -24,6 +24,7 @@ export function ProductFilters() {
   const products = useAppSelector((state) => state.catalog.products);
   const categories = useAppSelector((state) => state.catalog.categories);
   const loading = useAppSelector((state) => state.catalog.loading);
+  const error = useAppSelector((state) => state.catalog.error);
   const [category, setCategory] = useState<CategoryFilter>("All");
   const [type, setType] = useState<TypeFilter>("All");
 
@@ -32,15 +33,22 @@ export function ProductFilters() {
   }, [dispatch]);
 
   const categoryTabs = useMemo(() => {
+    // Prefer live DB categories only — do not mix in static demo garment tabs.
     const names = categories.map((item) => item.name).filter(Boolean);
-    const merged = Array.from(new Set(["All", ...productCategories.filter((item) => item !== "All"), ...names]));
-    return merged as CategoryFilter[];
+    if (names.length) {
+      return ["All", ...names] as CategoryFilter[];
+    }
+    return ["All", ...productCategories.filter((item) => item !== "All")] as CategoryFilter[];
   }, [categories]);
 
   const visible = useMemo(
     () =>
       products.filter((product) => {
-        if (category !== "All" && product.category !== category) return false;
+        if (category !== "All") {
+          const selected = String(category).trim().toLowerCase();
+          const productCategory = String(product.category || "").trim().toLowerCase();
+          if (productCategory !== selected) return false;
+        }
         if (type === "customizable") return product.customizable;
         if (type === "standard") return !product.customizable;
         return true;
@@ -127,7 +135,11 @@ export function ProductFilters() {
           <ProductGrid products={visible} columns={2} />
         ) : (
           <p className="rounded-xl border border-border bg-card p-10 text-center text-base text-white">
-            {loading ? "Loading products…" : "No products match those filters."}
+            {loading
+              ? "Loading products…"
+              : error
+                ? `Could not load products from the server. ${error}`
+                : "No products match those filters."}
           </p>
         )}
       </div>

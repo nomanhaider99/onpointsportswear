@@ -1,7 +1,7 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { catalogApi, apiMessage } from "@/lib/api/client";
 import { mapCategories, mapProduct, mapProductList, type ApiCategory, type ApiProduct } from "@/lib/api/mapProduct";
-import { products as fallbackProducts, type Product } from "@/data/products";
+import type { Product } from "@/data/products";
 
 type CatalogState = {
   categories: ApiCategory[];
@@ -25,13 +25,12 @@ function rejectMessage(error: unknown, fallback: string) {
 
 export const fetchShopCatalog = createAsyncThunk("catalog/shop", async (_, { rejectWithValue }) => {
   try {
-    const [productData, categories] = await Promise.all([
-      fetchAllProducts(),
-      catalogApi.categories(),
-    ]);
+    // Categories and products separately so a heavy products payload cannot wipe filters.
+    const categoriesResult = await catalogApi.categories().catch(() => []);
+    const productData = await fetchAllProducts();
     return {
       products: productData,
-      categories: mapCategories(categories),
+      categories: mapCategories(categoriesResult),
     };
   } catch (error) {
     return rejectWithValue(rejectMessage(error, "Could not load products"));
@@ -40,13 +39,14 @@ export const fetchShopCatalog = createAsyncThunk("catalog/shop", async (_, { rej
 
 async function fetchAllProducts() {
   const pageSize = 100;
-  const first = await catalogApi.products({ limit: pageSize, page: 1 });
+  // lean=true drops huge variant arrays — required or browsers/proxies abort the request.
+  const first = await catalogApi.products({ limit: pageSize, page: 1, lean: true });
   let products = mapProductList(first.products);
   const pages = Math.max(1, Number(first.pages) || 1);
   if (pages > 1) {
     const rest = await Promise.all(
       Array.from({ length: pages - 1 }, (_, index) =>
-        catalogApi.products({ limit: pageSize, page: index + 2 }),
+        catalogApi.products({ limit: pageSize, page: index + 2, lean: true }),
       ),
     );
     for (const page of rest) {
@@ -65,7 +65,7 @@ async function fetchAllProducts() {
 
 export const fetchFeatured = createAsyncThunk("catalog/featured", async (_, { rejectWithValue }) => {
   try {
-    const data = await catalogApi.products({ featured: "true", limit: 24 });
+    const data = await catalogApi.products({ featured: "true", limit: 24, lean: true });
     return mapProductList(data.products).filter((product) => product.featured);
   } catch (error) {
     return rejectWithValue(rejectMessage(error, "Could not load featured products"));
@@ -88,13 +88,8 @@ export const fetchProductBySlug = createAsyncThunk(
       const products = mapProductList(data.products);
       const found = products.find((item) => item.slug === slug);
       if (found) return found;
-
-      const fallback = fallbackProducts.find((item) => item.slug === slug);
-      if (fallback) return fallback;
       throw new Error("Product not found");
     } catch (error) {
-      const fallback = fallbackProducts.find((item) => item.slug === slug);
-      if (fallback) return fallback;
       return rejectWithValue(rejectMessage(error, "Product not found"));
     }
   },
@@ -131,7 +126,7 @@ const catalogSlice = createSlice({
       })
       .addCase(fetchShopCatalog.fulfilled, (state, action) => {
         state.loading = false;
-        state.products = action.payload.products.length ? action.payload.products : fallbackProducts;
+        state.products = action.payload.products;
         state.featured = state.products.filter((product) => product.featured);
         state.categories = action.payload.categories;
         state.bySlug = { ...state.bySlug, ...indexBySlug(state.products) };
@@ -139,11 +134,8 @@ const catalogSlice = createSlice({
       .addCase(fetchShopCatalog.rejected, (state, action) => {
         state.loading = false;
         state.error = String(action.payload || "Could not load products");
-        if (!state.products.length) {
-          state.products = fallbackProducts;
-          state.featured = fallbackProducts.filter((product) => product.featured);
-          state.bySlug = indexBySlug(fallbackProducts);
-        }
+        state.products = [];
+        state.featured = [];
       })
       .addCase(fetchFeatured.fulfilled, (state, action) => {
         state.featured = action.payload.length ? action.payload : state.featured;
