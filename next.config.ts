@@ -5,6 +5,14 @@ const nextConfig: NextConfig = {
   // dev server identity is localhost (or the reverse) — that 403'd
   // the product page JS and made the catalog look empty.
   allowedDevOrigins: ["127.0.0.1", "localhost", "192.168.1.9"],
+  async rewrites() {
+    return [
+      {
+        source: "/backend-api/:path*",
+        destination: "https://backend.onpointsportswear.com/api/:path*",
+      },
+    ];
+  },
   images: {
     // Local backend media is on 127.0.0.1 — Next 16 blocks that by default.
     dangerouslyAllowLocalIP: true,

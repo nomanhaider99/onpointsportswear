@@ -117,7 +117,27 @@ const catalogSlice = createSlice({
     productLoading: false,
     error: "",
   } as CatalogState,
-  reducers: {},
+  reducers: {
+    seedCatalog(
+      state,
+      action: {
+        payload: { products: Product[]; categories: ApiCategory[]; error?: string };
+      },
+    ) {
+      const products = action.payload.products || [];
+      const categories = action.payload.categories || [];
+      if (products.length) {
+        state.products = products;
+        state.featured = products.filter((product) => product.featured);
+        state.bySlug = { ...state.bySlug, ...indexBySlug(products) };
+        state.loading = false;
+        state.error = "";
+      } else if (action.payload.error) {
+        state.error = action.payload.error;
+      }
+      if (categories.length) state.categories = categories;
+    },
+  },
   extraReducers: (builder) => {
     builder
       .addCase(fetchShopCatalog.pending, (state) => {
@@ -161,4 +181,5 @@ const catalogSlice = createSlice({
   },
 });
 
+export const { seedCatalog } = catalogSlice.actions;
 export default catalogSlice.reducer;

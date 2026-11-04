@@ -5,21 +5,31 @@ import {
   productCategories,
   productTypes,
   productTypeLabels,
+  type Product,
   type ProductCategory,
   type ProductType,
 } from "@/data/products";
+import type { ApiCategory } from "@/lib/api/mapProduct";
 import { ProductGrid } from "./ProductGrid";
 import { cn } from "@/lib/utils";
-import { fetchShopCatalog } from "@/store/features/catalog/catalogSlice";
+import { fetchShopCatalog, seedCatalog } from "@/store/features/catalog/catalogSlice";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
-type CategoryFilter = "All" | ProductCategory;
+type CategoryFilter = "All" | ProductCategory | string;
 type TypeFilter = "All" | ProductType;
 
 const tabClass =
   "rounded-md border border-primary px-[15px] pb-[15px] pt-2.5 font-[family-name:var(--font-inter)] text-sm font-bold uppercase transition-colors duration-300";
 
-export function ProductFilters() {
+export function ProductFilters({
+  initialProducts = [],
+  initialCategories = [],
+  initialError = "",
+}: {
+  initialProducts?: Product[];
+  initialCategories?: ApiCategory[];
+  initialError?: string;
+}) {
   const dispatch = useAppDispatch();
   const products = useAppSelector((state) => state.catalog.products);
   const categories = useAppSelector((state) => state.catalog.categories);
@@ -29,21 +39,34 @@ export function ProductFilters() {
   const [type, setType] = useState<TypeFilter>("All");
 
   useEffect(() => {
+    if (initialProducts.length || initialCategories.length) {
+      dispatch(
+        seedCatalog({
+          products: initialProducts,
+          categories: initialCategories,
+          error: initialError,
+        }),
+      );
+    }
+    // Always refresh from API in the browser as well.
     dispatch(fetchShopCatalog());
+    // Seed once from SSR props; client refresh is separate.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dispatch]);
 
+  const list = products.length ? products : initialProducts;
+  const cats = categories.length ? categories : initialCategories;
+  const displayError = error || (list.length ? "" : initialError);
+
   const categoryTabs = useMemo(() => {
-    // Prefer live DB categories only — do not mix in static demo garment tabs.
-    const names = categories.map((item) => item.name).filter(Boolean);
-    if (names.length) {
-      return ["All", ...names] as CategoryFilter[];
-    }
+    const names = cats.map((item) => item.name).filter(Boolean);
+    if (names.length) return ["All", ...names] as CategoryFilter[];
     return ["All", ...productCategories.filter((item) => item !== "All")] as CategoryFilter[];
-  }, [categories]);
+  }, [cats]);
 
   const visible = useMemo(
     () =>
-      products.filter((product) => {
+      list.filter((product) => {
         if (category !== "All") {
           const selected = String(category).trim().toLowerCase();
           const productCategory = String(product.category || "").trim().toLowerCase();
@@ -53,7 +76,7 @@ export function ProductFilters() {
         if (type === "standard") return !product.customizable;
         return true;
       }),
-    [products, category, type],
+    [list, category, type],
   );
 
   return (
@@ -118,7 +141,7 @@ export function ProductFilters() {
       </div>
 
       <p className="mt-4 text-sm text-white/60" aria-live="polite">
-        {loading && products.length === 0
+        {loading && list.length === 0
           ? "Loading products…"
           : `${visible.length} ${visible.length === 1 ? "product" : "products"}`}
         {type === "customizable" && " you can add your own logo to"}
@@ -137,8 +160,8 @@ export function ProductFilters() {
           <p className="rounded-xl border border-border bg-card p-10 text-center text-base text-white">
             {loading
               ? "Loading products…"
-              : error
-                ? `Could not load products from the server. ${error}`
+              : displayError
+                ? `Could not load products from the server. ${displayError}`
                 : "No products match those filters."}
           </p>
         )}

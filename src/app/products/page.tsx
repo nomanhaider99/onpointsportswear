@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { Section } from "@/components/ui/Section";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { ProductFilters } from "@/components/products/ProductFilters";
+import { loadServerCatalog } from "@/lib/catalogServer";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Products",
@@ -16,7 +19,9 @@ export const metadata: Metadata = {
   },
 };
 
-export default function ProductsPage() {
+export default async function ProductsPage() {
+  const catalog = await loadServerCatalog();
+
   return (
     <Section>
       <div className="container-site text-center">
@@ -30,7 +35,11 @@ export default function ProductsPage() {
       </div>
 
       <div className="container-site mt-8">
-        <ProductFilters />
+        <ProductFilters
+          initialProducts={catalog.products}
+          initialCategories={catalog.categories}
+          initialError={catalog.error}
+        />
       </div>
     </Section>
   );

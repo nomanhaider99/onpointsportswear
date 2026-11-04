@@ -8,32 +8,32 @@ function isLoopback(url: string) {
 function isPublicShopHost() {
   if (typeof window === "undefined") return false;
   const host = window.location.hostname.toLowerCase();
-  return (
-    host.includes("onpointsportswear") ||
-    // host.includes("vercel.app") ||
-    host.includes("onpointsportswear.com")
-  );
+  return host.includes("onpointsportswear") || host.includes("vercel.app");
 }
 
 /**
- * Production / live shop always use the public backend.
- * Vercel env sometimes still has 127.0.0.1 baked in — never call loopback from HTTPS.
+ * Always resolve at call-time (never cache a bad URL from module init).
+ * Live shop / production builds always hit the public backend.
  */
-function resolveApiUrl() {
-  if (isPublicShopHost()) return PROD_API;
+export function getApiUrl() {
+  if (typeof window !== "undefined" && isPublicShopHost()) return PROD_API;
   if (process.env.NODE_ENV === "production") return PROD_API;
 
   const raw = String(process.env.NEXT_PUBLIC_API_URL || "")
     .trim()
     .replace(/\/$/, "");
   if (raw && !isLoopback(raw)) return raw;
+  if (raw && isLoopback(raw) && typeof window !== "undefined" && window.location.protocol === "https:") {
+    return PROD_API;
+  }
   return raw || DEV_API;
 }
 
-const API_URL = resolveApiUrl();
-export const API_ORIGIN = API_URL.replace(/\/api$/, "");
+/** @deprecated Prefer getApiUrl() — kept for existing imports. */
+export const API_URL = PROD_API;
+export const API_ORIGIN = PROD_API.replace(/\/api$/, "");
 
-export const WEB_URL = String(process.env.NEXT_PUBLIC_WEB_URL || "")
+export const WEB_URL = String(process.env.NEXT_PUBLIC_WEB_URL || "https://onpointsportswear.com")
   .trim()
   .replace(/\/$/, "");
 
@@ -45,4 +45,4 @@ export const JERSEY_STUDIO_URL = String(
   .trim()
   .replace(/\/$/, "");
 
-export { API_URL, PROD_API };
+export { PROD_API };

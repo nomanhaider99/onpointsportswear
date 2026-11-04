@@ -1,6 +1,13 @@
-import { API_URL, API_ORIGIN } from "@/lib/config";
+import { getApiUrl, API_URL, API_ORIGIN as CONFIG_ORIGIN } from "@/lib/config";
 
-export { API_URL, API_ORIGIN } from "@/lib/config";
+export { API_URL, getApiUrl } from "@/lib/config";
+
+export function getApiOrigin() {
+  return getApiUrl().replace(/\/api$/, "");
+}
+
+/** @deprecated Prefer getApiOrigin() */
+export const API_ORIGIN = CONFIG_ORIGIN;
 
 const TOKEN_KEY = "op-auth-token";
 
@@ -76,16 +83,17 @@ export function mediaUrl(url?: string | null) {
   if (/^(data:|blob:)/i.test(url)) return url;
   if (/unsplash\.com/i.test(url)) return url;
 
+  const origin = getApiOrigin();
   const proxied = proxyS3Url(url);
   if (proxied) return proxied;
 
   if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/i.test(url)) {
-    return url.replace(/^https?:\/\/[^/]+/i, API_ORIGIN);
+    return url.replace(/^https?:\/\/[^/]+/i, origin);
   }
   // Relative API / uploads / media keys from the backend
-  if (url.startsWith("/")) return `${API_ORIGIN}${url}`;
+  if (url.startsWith("/")) return `${origin}${url}`;
   if (/^(custom|products|categories|coupons|avatars)\//i.test(url)) {
-    return `${API_ORIGIN}/api/media/${url
+    return `${origin}/api/media/${url
       .split("/")
       .map((part) => encodeURIComponent(part))
       .join("/")}`;
@@ -94,8 +102,9 @@ export function mediaUrl(url?: string | null) {
 }
 
 function proxyS3Url(value: string) {
+  const origin = getApiOrigin();
   const mediaMatch = value.match(/\/api\/media\/(.+?)(?:\?|#|$)/i);
-  if (mediaMatch) return `${API_ORIGIN}/api/media/${mediaMatch[1]}`;
+  if (mediaMatch) return `${origin}/api/media/${mediaMatch[1]}`;
 
   let key = "";
   if (value.startsWith("s3://")) {
@@ -109,13 +118,10 @@ function proxyS3Url(value: string) {
       const pathname = decodeURIComponent(parsed.pathname.replace(/^\/+/, ""));
       const isS3 =
         /(^|\.)s3([.-]|$)/i.test(host) ||
-        host.endsWith("amazonaws.com") && host.includes("s3") ||
+        (host.endsWith("amazonaws.com") && host.includes("s3")) ||
         /\.s3-website[.-]/i.test(host);
       if (!isS3) return "";
       const parts = pathname.split("/");
-      if (parts.length > 1 && !pathname.includes(".")) {
-        // path-style: bucket/key
-      }
       if (host.startsWith("s3.") || host.startsWith("s3-")) {
         key = parts.slice(1).join("/");
       } else {
@@ -133,7 +139,7 @@ function proxyS3Url(value: string) {
     .filter(Boolean)
     .map((part) => encodeURIComponent(part))
     .join("/");
-  return `${API_ORIGIN}/api/media/${encoded}`;
+  return `${origin}/api/media/${encoded}`;
 }
 
 type RequestOptions = {
@@ -157,7 +163,7 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
 
   let response: Response;
   try {
-    let base = API_URL;
+    let base = getApiUrl();
     if (
       typeof window !== "undefined" &&
       window.location.protocol === "https:" &&
@@ -169,6 +175,7 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
       method: options.method || "GET",
       headers,
       body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+      cache: "no-store",
     });
   } catch {
     throw new ApiError(statusFallback(0), 0);
