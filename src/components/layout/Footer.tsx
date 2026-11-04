@@ -2,13 +2,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { footerLegalLinks, footerQuickLinks, footerServiceLinks } from "@/data/navigation";
 import { siteConfig } from "@/data/site";
-import { FacebookIcon, InstagramIcon, XIcon } from "./SocialIcons";
+import { FacebookIcon, InstagramIcon, WhatsAppIcon, XIcon } from "./SocialIcons";
 
-/** The source markup renders these three icons without hrefs; they stay inert until accounts exist. */
 const socialLinks = [
-  { label: "Instagram", href: "#", Icon: InstagramIcon },
-  { label: "Facebook", href: "#", Icon: FacebookIcon },
-  { label: "X", href: "#", Icon: XIcon },
+  { label: "WhatsApp", href: siteConfig.whatsappHref, Icon: WhatsAppIcon, external: true },
+  { label: "Instagram", href: "#", Icon: InstagramIcon, external: false },
+  { label: "Facebook", href: "#", Icon: FacebookIcon, external: false },
+  { label: "X", href: "#", Icon: XIcon, external: false },
 ];
 
 const columnHeading = "text-xs font-bold uppercase text-primary";
@@ -66,11 +66,14 @@ export function Footer() {
           <div>
             <h2 className={columnHeading}>Social</h2>
             <ul className="mt-4 flex items-center gap-2.5">
-              {socialLinks.map(({ label, href, Icon }) => (
+              {socialLinks.map(({ label, href, Icon, external }) => (
                 <li key={label}>
                   <a
                     href={href}
                     aria-label={label}
+                    {...(external
+                      ? { target: "_blank", rel: "noopener noreferrer" }
+                      : {})}
                     className="block rounded-full transition-opacity duration-300 hover:opacity-70"
                   >
                     <Icon />

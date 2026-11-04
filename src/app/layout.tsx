@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import localFont from "next/font/local";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import { WhatsAppFloat } from "@/components/layout/WhatsAppFloat";
 import { siteConfig } from "@/data/site";
 import { StoreProvider } from "@/store/StoreProvider";
 import { AppToaster } from "@/components/ui/AppToaster";
@@ -80,6 +81,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Header />
         <main id="content">{children}</main>
         <Footer />
+        <WhatsAppFloat />
         <AppToaster />
         </StoreProvider>
       </body>

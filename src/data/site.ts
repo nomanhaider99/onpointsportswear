@@ -23,6 +23,9 @@ export const siteConfig = {
   email: "onpointpromotions23@gmail.com",
   phone: "647-805-5730",
   phoneHref: "tel:+16478055730",
+  /** E.164 digits for WhatsApp (no + or spaces). */
+  whatsapp: "+1 647 805 5730",
+  whatsappHref: "https://wa.me/16478055730",
   credit: {
     label: "Design & Developed By Premium Web Agency.", 
     href: "https://premiumwebagency.com/",
