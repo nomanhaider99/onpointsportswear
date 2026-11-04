@@ -10,8 +10,8 @@ function isPublicShopHost() {
   const host = window.location.hostname.toLowerCase();
   return (
     host.includes("onpointsportswear") ||
-    host.includes("vercel.app") ||
-    host.includes("betterbuildsc.com")
+    // host.includes("vercel.app") ||
+    host.includes("onpointsportswear.com")
   );
 }
 
